@@ -6,7 +6,7 @@
    ↓
 [x] monitoring.IncomingMessage
    ↓
-[ ] monitoring.Event
+[x] monitoring.Event
    ↓
 [ ] ai.AIAnalysisResult
    ↓
