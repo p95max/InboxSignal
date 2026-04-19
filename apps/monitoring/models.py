@@ -109,6 +109,13 @@ class IncomingMessage(models.Model):
         on_delete=models.CASCADE,
         related_name="incoming_messages",
     )
+    source = models.ForeignKey(
+        "integrations.ConnectedSource",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="incoming_messages",
+    )
 
     channel = models.CharField(
         max_length=30,
@@ -153,6 +160,7 @@ class IncomingMessage(models.Model):
         ordering = ["-received_at"]
         indexes = [
             models.Index(fields=["profile", "processing_status"]),
+            models.Index(fields=["source", "processing_status"]),
             models.Index(fields=["channel", "external_chat_id"]),
             models.Index(fields=["received_at"]),
             models.Index(fields=["dedup_key"]),
@@ -160,13 +168,20 @@ class IncomingMessage(models.Model):
 
     def build_dedup_key(self):
         """Build a stable deduplication key from external message identifiers."""
+        source_part = (
+            str(self.source_id)
+            if self.source_id
+            else self.external_source_id or "no-source"
+        )
+
         parts = [
             str(self.profile_id),
             self.channel,
-            self.external_source_id or "no-source",
+            source_part,
             self.external_chat_id or "no-chat",
             self.external_message_id or str(self.id),
         ]
+
         return ":".join(parts)
 
     def save(self, *args, **kwargs):

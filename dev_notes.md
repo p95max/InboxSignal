@@ -2,7 +2,7 @@
    ↓
 [x] monitoring.MonitoringProfile
    ↓
-[ ] integrations.ConnectedSource
+[x] integrations.ConnectedSource
    ↓
 [ ] monitoring.IncomingMessage
    ↓
