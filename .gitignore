@@ -1,0 +1,105 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Poetry
+# Do NOT ignore pyproject.toml
+# Do NOT ignore poetry.lock
+poetry.toml
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Django generated/runtime files
+staticfiles/
+static_root/
+media/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Tests / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.cache/
+.mypy_cache/
+.ruff_cache/
+hypothesis/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Telegram / integration secrets
+*.session
+*.session-journal
+telegram.session*
+secrets/
+*.pem
+*.key
+*.crt
+
+# Database dumps / backups
+*.sql
+*.dump
+*.backup
+*.bak
+
+# Docker local volumes / runtime data
+docker-data/
+data/
+tmp/
+temp/
+
+# Logs
+logs/
+*.log
+
+# IDE / editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Frontend, if added later
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+frontend/dist/
+frontend/build/
+
+# Local scripts output
+*.pid
+*.seed

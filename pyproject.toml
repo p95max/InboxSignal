@@ -1,0 +1,47 @@
+[project]
+name = "messaging-monitoring-system"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "maxx",email = "m.petrykin@gmx.de"}
+]
+readme = "README.md"
+requires-python = "^3.12"
+dependencies = [
+    "django (>=6.0.4,<7.0.0)",
+    "psycopg[binary] (>=3.3.3,<4.0.0)",
+    "django-environ (>=0.13.0,<0.14.0)",
+    "dj-database-url (>=3.1.2,<4.0.0)",
+    "celery (>=5.6.3,<6.0.0)",
+    "redis (>=7.4.0,<8.0.0)",
+    "django-redis (>=6.0.0,<7.0.0)",
+    "django-celery-results (>=2.6.0,<3.0.0)",
+    "django-celery-beat (>=2.9.0,<3.0.0)",
+    "django-allauth (>=65.16.1,<66.0.0)",
+    "httpx (>=0.28.1,<0.29.0)",
+    "openai (>=2.32.0,<3.0.0)",
+    "python-telegram-bot (>=22.7,<23.0)",
+    "structlog (>=25.5.0,<26.0.0)",
+    "python-json-logger (>=4.1.0,<5.0.0)",
+    "gunicorn (>=25.3.0,<26.0.0)",
+    "whitenoise (>=6.12.0,<7.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.0.3,<10.0.0)",
+    "pytest-django (>=4.12.0,<5.0.0)",
+    "pytest-cov (>=7.1.0,<8.0.0)",
+    "pytest-mock (>=3.15.1,<4.0.0)",
+    "factory-boy (>=3.3.3,<4.0.0)",
+    "freezegun (>=1.5.5,<2.0.0)",
+    "ruff (>=0.15.11,<0.16.0)",
+    "mypy (>=1.20.1,<2.0.0)",
+    "django-stubs (>=6.0.3,<7.0.0)",
+    "types-redis (>=4.6.0.20241004,<5.0.0.0)"
+]
