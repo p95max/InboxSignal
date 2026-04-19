@@ -4,10 +4,9 @@ set -e
 
 if [ "$RUN_MIGRATIONS" = "1" ]; then
   python manage.py migrate
-fi
 
-if [ "$DJANGO_CREATE_SUPERUSER" = "True" ]; then
-  python manage.py shell <<'PY'
+  if [ "$DJANGO_CREATE_SUPERUSER" = "True" ]; then
+    python manage.py shell <<'PY'
 import os
 
 from django.contrib.auth import get_user_model
@@ -66,6 +65,7 @@ elif changed:
 else:
     print(f"Superuser already exists: {lookup_value}")
 PY
+  fi
 fi
 
 exec "$@"

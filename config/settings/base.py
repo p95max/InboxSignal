@@ -24,7 +24,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    "apps.accounts",
+    "apps.accounts.apps.AccountsConfig",
     "apps.core",
     "apps.monitoring",
     "apps.integrations",
@@ -95,3 +95,5 @@ LOGGING = {
         "level": "INFO",
     },
 }
+
+AUTH_USER_MODEL = "accounts.User"
