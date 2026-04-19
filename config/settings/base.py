@@ -27,7 +27,7 @@ INSTALLED_APPS = [
     "apps.accounts.apps.AccountsConfig",
     "apps.core",
     "apps.monitoring.apps.MonitoringConfig",
-    "apps.integrations",
+    "apps.integrations.apps.IntegrationsConfig",
     "apps.ai",
     "apps.alerts",
 ]
@@ -97,3 +97,5 @@ LOGGING = {
 }
 
 AUTH_USER_MODEL = "accounts.User"
+
+FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="")

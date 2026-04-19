@@ -1,6 +1,6 @@
 [x] accounts.User
    ↓
-[ ] monitoring.MonitoringProfile
+[x] monitoring.MonitoringProfile
    ↓
 [ ] integrations.ConnectedSource
    ↓
@@ -11,3 +11,8 @@
 [ ] ai.AIAnalysisResult
    ↓
 [ ] alerts.AlertDelivery
+
+# shell
+```bash
+docker compose exec web python manage.py shell
+```
