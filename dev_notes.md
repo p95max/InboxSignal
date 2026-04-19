@@ -4,7 +4,7 @@
    ↓
 [x] integrations.ConnectedSource
    ↓
-[ ] monitoring.IncomingMessage
+[x] monitoring.IncomingMessage
    ↓
 [ ] monitoring.Event
    ↓

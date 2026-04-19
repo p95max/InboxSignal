@@ -75,15 +75,18 @@ class EventAdmin(admin.ModelAdmin):
         "priority",
         "priority_score",
         "status",
+        "detection_source",
         "created_at",
     )
     list_filter = (
         "category",
         "priority",
         "status",
+        "detection_source",
         "created_at",
     )
     search_fields = (
+        "title",
         "summary",
         "message_text_snapshot",
         "profile__name",
@@ -95,5 +98,6 @@ class EventAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
         "reviewed_at",
+        "ignored_at",
         "escalated_at",
     )

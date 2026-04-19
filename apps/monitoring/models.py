@@ -215,6 +215,11 @@ class Event(models.Model):
         IGNORED = "ignored", _("Ignored")
         ESCALATED = "escalated", _("Escalated")
 
+    class DetectionSource(models.TextChoices):
+        RULES = "rules", _("Rules")
+        AI = "ai", _("AI")
+        FALLBACK = "fallback", _("Fallback")
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     profile = models.ForeignKey(
@@ -245,6 +250,11 @@ class Event(models.Model):
         choices=Status.choices,
         default=Status.NEW,
     )
+    detection_source = models.CharField(
+        max_length=30,
+        choices=DetectionSource.choices,
+        default=DetectionSource.RULES,
+    )
 
     priority_score = models.PositiveSmallIntegerField(
         default=0,
@@ -265,7 +275,9 @@ class Event(models.Model):
     extracted_data = models.JSONField(
         default=dict,
         blank=True,
-        help_text=_("Extracted fields like name, contact, budget, product_or_service."),
+        help_text=_(
+            "Extracted fields like name, contact, budget, product_or_service, date_or_time."
+        ),
     )
     rule_metadata = models.JSONField(
         default=dict,
@@ -274,6 +286,7 @@ class Event(models.Model):
     )
 
     reviewed_at = models.DateTimeField(null=True, blank=True)
+    ignored_at = models.DateTimeField(null=True, blank=True)
     escalated_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -284,7 +297,9 @@ class Event(models.Model):
         indexes = [
             models.Index(fields=["profile", "status"]),
             models.Index(fields=["profile", "priority"]),
+            models.Index(fields=["profile", "category"]),
             models.Index(fields=["category"]),
+            models.Index(fields=["priority"]),
             models.Index(fields=["priority_score"]),
             models.Index(fields=["created_at"]),
         ]
@@ -293,24 +308,49 @@ class Event(models.Model):
                 condition=Q(priority_score__gte=0) & Q(priority_score__lte=100),
                 name="event_priority_score_0_100",
             ),
+            models.UniqueConstraint(
+                fields=["incoming_message"],
+                condition=Q(incoming_message__isnull=False),
+                name="unique_event_per_incoming_message",
+            ),
         ]
 
+    @classmethod
+    def priority_from_score(cls, score):
+        """Map numeric score to event priority."""
+        if score >= 80:
+            return cls.Priority.URGENT
+
+        if score >= 50:
+            return cls.Priority.IMPORTANT
+
+        return cls.Priority.IGNORE
+
     def save(self, *args, **kwargs):
+        is_new = self._state.adding
+
         if self.incoming_message and not self.message_text_snapshot:
             self.message_text_snapshot = self.incoming_message.text
 
-        if self.priority_score >= 80:
-            self.priority = self.Priority.URGENT
-        elif self.priority_score >= 50:
-            self.priority = self.Priority.IMPORTANT
-        else:
-            self.priority = self.Priority.IGNORE
+        self.priority = self.priority_from_score(self.priority_score)
+
+        update_fields = kwargs.get("update_fields")
+
+        if update_fields is not None:
+            update_fields = set(update_fields)
+            update_fields.add("priority")
+
+            if self.incoming_message and self.message_text_snapshot:
+                update_fields.add("message_text_snapshot")
+
+            kwargs["update_fields"] = list(update_fields)
 
         super().save(*args, **kwargs)
 
-        MonitoringProfile.objects.filter(id=self.profile_id).update(
-            last_event_at=self.created_at or timezone.now()
-        )
+        if is_new:
+            MonitoringProfile.objects.filter(id=self.profile_id).update(
+                last_event_at=self.created_at or timezone.now()
+            )
 
     def mark_reviewed(self):
         self.status = self.Status.REVIEWED
@@ -319,7 +359,8 @@ class Event(models.Model):
 
     def mark_ignored(self):
         self.status = self.Status.IGNORED
-        self.save(update_fields=["status", "updated_at"])
+        self.ignored_at = timezone.now()
+        self.save(update_fields=["status", "ignored_at", "updated_at"])
 
     def mark_escalated(self):
         self.status = self.Status.ESCALATED
