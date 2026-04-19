@@ -26,7 +26,7 @@ INSTALLED_APPS = [
 
     "apps.accounts.apps.AccountsConfig",
     "apps.core",
-    "apps.monitoring",
+    "apps.monitoring.apps.MonitoringConfig",
     "apps.integrations",
     "apps.ai",
     "apps.alerts",

@@ -1,0 +1,315 @@
+import uuid
+
+from django.conf import settings
+from django.core.validators import MaxLengthValidator, MaxValueValidator, MinValueValidator
+from django.db import models
+from django.db.models import Q
+from django.utils import timezone
+from django.utils.html import strip_tags
+from django.utils.translation import gettext_lazy as _
+
+
+class MonitoringProfile(models.Model):
+    """User-owned monitoring configuration for analyzing incoming messages."""
+
+    class Scenario(models.TextChoices):
+        LEADS = "leads", _("Lead detection")
+        COMPLAINTS = "complaints", _("Complaint / negative feedback")
+        BOOKING = "booking", _("Booking / request")
+        URGENT = "urgent", _("Urgent messages")
+        GENERAL = "general", _("General monitoring")
+        CUSTOM = "custom", _("Custom")
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", _("Active")
+        DISABLED = "disabled", _("Disabled")
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="monitoring_profiles",
+    )
+    name = models.CharField(max_length=120)
+    scenario = models.CharField(
+        max_length=30,
+        choices=Scenario.choices,
+        default=Scenario.GENERAL,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+    )
+
+    business_context = models.TextField(
+        blank=True,
+        validators=[MaxLengthValidator(300)],
+        help_text=_("Optional plain text business context, max 300 characters."),
+    )
+
+    track_leads = models.BooleanField(default=True)
+    track_complaints = models.BooleanField(default=True)
+    track_requests = models.BooleanField(default=True)
+    track_urgent = models.BooleanField(default=True)
+    track_general_activity = models.BooleanField(default=False)
+
+    ignore_greetings = models.BooleanField(default=True)
+    ignore_short_replies = models.BooleanField(default=True)
+    ignore_emojis = models.BooleanField(default=True)
+
+    urgent_negative = models.BooleanField(default=True)
+    urgent_deadlines = models.BooleanField(default=True)
+    urgent_repeated_messages = models.BooleanField(default=True)
+
+    extract_name = models.BooleanField(default=True)
+    extract_contact = models.BooleanField(default=True)
+    extract_budget = models.BooleanField(default=True)
+    extract_product_or_service = models.BooleanField(default=True)
+
+    last_event_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        indexes = [
+            models.Index(fields=["owner", "status"]),
+            models.Index(fields=["scenario"]),
+            models.Index(fields=["last_event_at"]),
+        ]
+
+    def clean(self):
+        """Normalize user-provided plain text fields."""
+        if self.business_context:
+            self.business_context = strip_tags(self.business_context).strip()
+
+    def __str__(self):
+        return f"{self.name} ({self.owner})"
+
+
+class IncomingMessage(models.Model):
+    """Raw incoming message stored before rule-based or AI processing."""
+
+    class Channel(models.TextChoices):
+        TELEGRAM = "telegram", _("Telegram")
+        WHATSAPP = "whatsapp", _("WhatsApp")
+        OTHER = "other", _("Other")
+
+    class ProcessingStatus(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        PROCESSED = "processed", _("Processed")
+        FAILED = "failed", _("Failed")
+        IGNORED = "ignored", _("Ignored")
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    profile = models.ForeignKey(
+        MonitoringProfile,
+        on_delete=models.CASCADE,
+        related_name="incoming_messages",
+    )
+
+    channel = models.CharField(
+        max_length=30,
+        choices=Channel.choices,
+        default=Channel.TELEGRAM,
+    )
+
+    external_source_id = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text=_("External source identifier, for example Telegram bot or chat source."),
+    )
+    external_chat_id = models.CharField(max_length=255, blank=True)
+    external_message_id = models.CharField(max_length=255, blank=True)
+
+    sender_id = models.CharField(max_length=255, blank=True)
+    sender_username = models.CharField(max_length=255, blank=True)
+    sender_display_name = models.CharField(max_length=255, blank=True)
+
+    text = models.TextField(blank=True)
+    raw_payload = models.JSONField(default=dict, blank=True)
+
+    dedup_key = models.CharField(
+        max_length=500,
+        unique=True,
+        editable=False,
+        help_text=_("Deterministic key used to prevent duplicate message processing."),
+    )
+
+    processing_status = models.CharField(
+        max_length=20,
+        choices=ProcessingStatus.choices,
+        default=ProcessingStatus.PENDING,
+    )
+    processing_error = models.TextField(blank=True)
+
+    received_at = models.DateTimeField(default=timezone.now)
+    ingested_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-received_at"]
+        indexes = [
+            models.Index(fields=["profile", "processing_status"]),
+            models.Index(fields=["channel", "external_chat_id"]),
+            models.Index(fields=["received_at"]),
+            models.Index(fields=["dedup_key"]),
+        ]
+
+    def build_dedup_key(self):
+        """Build a stable deduplication key from external message identifiers."""
+        parts = [
+            str(self.profile_id),
+            self.channel,
+            self.external_source_id or "no-source",
+            self.external_chat_id or "no-chat",
+            self.external_message_id or str(self.id),
+        ]
+        return ":".join(parts)
+
+    def save(self, *args, **kwargs):
+        if not self.dedup_key:
+            self.dedup_key = self.build_dedup_key()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.channel}:{self.external_chat_id}:{self.external_message_id}"
+
+
+class Event(models.Model):
+    """Structured event created from an incoming message."""
+
+    class Category(models.TextChoices):
+        LEAD = "lead", _("Lead")
+        COMPLAINT = "complaint", _("Complaint")
+        REQUEST = "request", _("Request")
+        INFO = "info", _("Info")
+        SPAM = "spam", _("Spam")
+
+    class Priority(models.TextChoices):
+        URGENT = "urgent", _("Urgent")
+        IMPORTANT = "important", _("Important")
+        IGNORE = "ignore", _("Ignore")
+
+    class Status(models.TextChoices):
+        NEW = "new", _("New")
+        REVIEWED = "reviewed", _("Reviewed")
+        IGNORED = "ignored", _("Ignored")
+        ESCALATED = "escalated", _("Escalated")
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    profile = models.ForeignKey(
+        MonitoringProfile,
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+    incoming_message = models.ForeignKey(
+        IncomingMessage,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="events",
+    )
+
+    category = models.CharField(
+        max_length=30,
+        choices=Category.choices,
+        default=Category.INFO,
+    )
+    priority = models.CharField(
+        max_length=30,
+        choices=Priority.choices,
+        default=Priority.IGNORE,
+    )
+    status = models.CharField(
+        max_length=30,
+        choices=Status.choices,
+        default=Status.NEW,
+    )
+
+    priority_score = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[
+            MinValueValidator(0),
+            MaxValueValidator(100),
+        ],
+    )
+
+    title = models.CharField(max_length=160, blank=True)
+    summary = models.CharField(max_length=500, blank=True)
+
+    message_text_snapshot = models.TextField(
+        blank=True,
+        help_text=_("Message text copied from IncomingMessage for event history stability."),
+    )
+
+    extracted_data = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=_("Extracted fields like name, contact, budget, product_or_service."),
+    )
+    rule_metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=_("Metadata from rule-based processing."),
+    )
+
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    escalated_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["profile", "status"]),
+            models.Index(fields=["profile", "priority"]),
+            models.Index(fields=["category"]),
+            models.Index(fields=["priority_score"]),
+            models.Index(fields=["created_at"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(priority_score__gte=0) & Q(priority_score__lte=100),
+                name="event_priority_score_0_100",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.incoming_message and not self.message_text_snapshot:
+            self.message_text_snapshot = self.incoming_message.text
+
+        if self.priority_score >= 80:
+            self.priority = self.Priority.URGENT
+        elif self.priority_score >= 50:
+            self.priority = self.Priority.IMPORTANT
+        else:
+            self.priority = self.Priority.IGNORE
+
+        super().save(*args, **kwargs)
+
+        MonitoringProfile.objects.filter(id=self.profile_id).update(
+            last_event_at=self.created_at or timezone.now()
+        )
+
+    def mark_reviewed(self):
+        self.status = self.Status.REVIEWED
+        self.reviewed_at = timezone.now()
+        self.save(update_fields=["status", "reviewed_at", "updated_at"])
+
+    def mark_ignored(self):
+        self.status = self.Status.IGNORED
+        self.save(update_fields=["status", "updated_at"])
+
+    def mark_escalated(self):
+        self.status = self.Status.ESCALATED
+        self.escalated_at = timezone.now()
+        self.save(update_fields=["status", "escalated_at", "updated_at"])
+
+    def __str__(self):
+        return f"{self.category} / {self.priority} / {self.priority_score}"
