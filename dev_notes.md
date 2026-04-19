@@ -8,9 +8,9 @@
    ↓
 [x] monitoring.Event
    ↓
-[ ] ai.AIAnalysisResult
+[x] ai.AIAnalysisResult
    ↓
-[ ] alerts.AlertDelivery
+[x] alerts.AlertDelivery
 
 # shell
 ```bash

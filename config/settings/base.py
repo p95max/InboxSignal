@@ -29,7 +29,7 @@ INSTALLED_APPS = [
     "apps.monitoring.apps.MonitoringConfig",
     "apps.integrations.apps.IntegrationsConfig",
     "apps.ai.apps.AiConfig",
-    "apps.alerts",
+    "apps.alerts.apps.AlertsConfig",
 ]
 
 MIDDLEWARE = [
