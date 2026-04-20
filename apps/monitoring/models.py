@@ -88,6 +88,103 @@ class MonitoringProfile(models.Model):
         return f"{self.name} ({self.owner})"
 
 
+class ExternalContact(models.Model):
+    """External sender/contact detected from an incoming communication source."""
+
+    class Channel(models.TextChoices):
+        TELEGRAM = "telegram", _("Telegram")
+        WHATSAPP = "whatsapp", _("WhatsApp")
+        OTHER = "other", _("Other")
+
+    profile = models.ForeignKey(
+        MonitoringProfile,
+        on_delete=models.CASCADE,
+        related_name="external_contacts",
+    )
+    source = models.ForeignKey(
+        "integrations.ConnectedSource",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="external_contacts",
+    )
+
+    channel = models.CharField(
+        max_length=30,
+        choices=Channel.choices,
+        default=Channel.TELEGRAM,
+    )
+
+    external_source_id = models.CharField(max_length=255, blank=True)
+    external_chat_id = models.CharField(max_length=255, blank=True)
+    external_user_id = models.CharField(max_length=255, blank=True)
+
+    username = models.CharField(max_length=255, blank=True)
+    display_name = models.CharField(max_length=255, blank=True)
+
+    dedup_key = models.CharField(
+        max_length=500,
+        unique=True,
+        editable=False,
+        help_text=_("Deterministic key used to identify the same external contact."),
+    )
+
+    message_count = models.PositiveIntegerField(default=0)
+
+    metadata = models.JSONField(default=dict, blank=True)
+
+    first_seen_at = models.DateTimeField(default=timezone.now)
+    last_seen_at = models.DateTimeField(default=timezone.now)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-last_seen_at"]
+        indexes = [
+            models.Index(fields=["profile", "channel"]),
+            models.Index(fields=["source"]),
+            models.Index(fields=["external_user_id"]),
+            models.Index(fields=["external_chat_id"]),
+            models.Index(fields=["username"]),
+            models.Index(fields=["dedup_key"]),
+            models.Index(fields=["last_seen_at"]),
+        ]
+
+    def build_dedup_key(self):
+        """Build a stable key for identifying the same external contact."""
+        source_part = (
+            str(self.source_id)
+            if self.source_id
+            else self.external_source_id or "no-source"
+        )
+        identity_part = (
+            self.external_user_id
+            or self.external_chat_id
+            or self.username
+            or "unknown-contact"
+        )
+
+        return ":".join(
+            [
+                str(self.profile_id),
+                self.channel,
+                source_part,
+                identity_part,
+            ]
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.dedup_key:
+            self.dedup_key = self.build_dedup_key()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        label = self.username or self.display_name or self.external_user_id
+        return f"{label or 'unknown'} / {self.channel}"
+
+
 class IncomingMessage(models.Model):
     """Raw incoming message stored before rule-based or AI processing."""
 
@@ -116,7 +213,13 @@ class IncomingMessage(models.Model):
         blank=True,
         related_name="incoming_messages",
     )
-
+    external_contact = models.ForeignKey(
+        ExternalContact,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="incoming_messages",
+    )
     channel = models.CharField(
         max_length=30,
         choices=Channel.choices,

@@ -11,6 +11,7 @@ from django.utils import timezone
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.models import IncomingMessage, MonitoringProfile
 from apps.monitoring.tasks import process_incoming_message_task
+from apps.monitoring.services.contacts import upsert_external_contact
 
 
 logger = logging.getLogger(__name__)
@@ -96,6 +97,23 @@ def ingest_incoming_message(
             },
         )
 
+        contact = upsert_external_contact(
+            profile=profile,
+            source=source,
+            channel=channel,
+            external_source_id=external_source_id,
+            external_chat_id=external_chat_id,
+            external_user_id=sender_id,
+            username=sender_username,
+            display_name=sender_display_name,
+            seen_at=received_at,
+            increment_message_count=created,
+        )
+
+        if contact and message.external_contact_id != contact.id:
+            message.external_contact = contact
+            message.save(update_fields=["external_contact"])
+
         if created:
             logger.info(
                 "incoming_message_ingested_created",
@@ -104,6 +122,7 @@ def ingest_incoming_message(
                     "profile_id": profile.id,
                     "channel": channel,
                     "dedup_key": dedup_key,
+                    "external_contact_id": contact.id if contact else None,
                 },
             )
             should_enqueue = enqueue_processing
@@ -117,6 +136,7 @@ def ingest_incoming_message(
                     "channel": channel,
                     "processing_status": message.processing_status,
                     "dedup_key": dedup_key,
+                    "external_contact_id": contact.id if contact else None,
                 },
             )
 

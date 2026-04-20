@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.monitoring.models import Event, IncomingMessage, MonitoringProfile
+from apps.monitoring.models import Event, ExternalContact, IncomingMessage, MonitoringProfile
 
 
 @admin.register(MonitoringProfile)
@@ -39,6 +39,7 @@ class IncomingMessageAdmin(admin.ModelAdmin):
         "id",
         "profile",
         "channel",
+        "external_contact",
         "external_chat_id",
         "external_message_id",
         "processing_status",
@@ -57,6 +58,9 @@ class IncomingMessageAdmin(admin.ModelAdmin):
         "external_chat_id",
         "external_message_id",
         "dedup_key",
+        "external_contact__username",
+        "external_contact__display_name",
+        "external_contact__external_user_id",
     )
     readonly_fields = (
         "id",
@@ -100,4 +104,42 @@ class EventAdmin(admin.ModelAdmin):
         "reviewed_at",
         "ignored_at",
         "escalated_at",
+    )
+
+
+@admin.register(ExternalContact)
+class ExternalContactAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "profile",
+        "source",
+        "channel",
+        "external_user_id",
+        "external_chat_id",
+        "username",
+        "display_name",
+        "message_count",
+        "last_seen_at",
+    )
+    list_filter = (
+        "channel",
+        "created_at",
+        "last_seen_at",
+    )
+    search_fields = (
+        "external_user_id",
+        "external_chat_id",
+        "username",
+        "display_name",
+        "dedup_key",
+        "profile__name",
+        "profile__owner__email",
+    )
+    readonly_fields = (
+        "dedup_key",
+        "message_count",
+        "first_seen_at",
+        "last_seen_at",
+        "created_at",
+        "updated_at",
     )
