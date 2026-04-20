@@ -6,6 +6,7 @@ from django.utils import timezone
 from apps.alerts.services.delivery import create_alert_delivery_for_event
 from apps.monitoring.models import Event, IncomingMessage
 from apps.monitoring.services.rules import analyze_message_by_rules
+from apps.alerts.tasks import send_alert_delivery_task
 
 
 logger = logging.getLogger(__name__)
@@ -108,6 +109,11 @@ def process_incoming_message(message_id: str) -> Event | None:
             )
 
             alert = create_alert_delivery_for_event(event)
+
+            if alert:
+                transaction.on_commit(
+                    lambda alert_id=str(alert.id): send_alert_delivery_task.delay(alert_id)
+                )
 
             logger.info(
                 "alert_delivery_linked" if alert else "alert_delivery_not_created",

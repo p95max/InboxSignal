@@ -45,3 +45,8 @@ docker compose logs -f celery_worker
 ```bash
 docker compose run --rm -e RUN_MIGRATIONS=0 web pytest
 ```
+
+docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhook set \
+  --source-id 1 \
+  --base-url https://identify-symbols-often-suggested.trycloudflare.com     \
+  --drop-pending-updates
