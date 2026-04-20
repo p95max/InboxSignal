@@ -29,3 +29,6 @@ docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py migrate
 docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py check
 docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py showmigrations
 ```
+
+# shell
+docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py shell

@@ -3,6 +3,7 @@ from django.utils import timezone
 
 from apps.monitoring.models import Event, IncomingMessage
 from apps.monitoring.services.rules import analyze_message_by_rules
+from apps.alerts.services.delivery import create_alert_delivery_for_event
 
 
 def process_incoming_message(message_id: str) -> Event | None:
@@ -16,7 +17,12 @@ def process_incoming_message(message_id: str) -> Event | None:
         )
 
         if message.processing_status == IncomingMessage.ProcessingStatus.PROCESSED:
-            return message.events.first()
+            event = message.events.first()
+
+            if event:
+                create_alert_delivery_for_event(event)
+
+            return event
 
         analysis = analyze_message_by_rules(
             text=message.text,
@@ -53,6 +59,11 @@ def process_incoming_message(message_id: str) -> Event | None:
             )
         except IntegrityError:
             event = message.events.first()
+
+        if event:
+            create_alert_delivery_for_event(event)
+
+        message.processing_status = IncomingMessage.ProcessingStatus.PROCESSED
 
         message.processing_status = IncomingMessage.ProcessingStatus.PROCESSED
         message.processing_error = ""
