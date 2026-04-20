@@ -16,17 +16,17 @@
 
     <div class="card">
         <div class="stat-value">{{ stats.urgent }}</div>
-        <div class="stat-label">Urgent new events</div>
+        <div class="stat-label">Urgent open</div>
     </div>
 
     <div class="card">
         <div class="stat-value">{{ stats.important }}</div>
-        <div class="stat-label">Important new events</div>
+        <div class="stat-label">Important open</div>
     </div>
 
     <div class="card">
         <div class="stat-value">{{ stats.new }}</div>
-        <div class="stat-label">New events</div>
+        <div class="stat-label">Open events</div>
     </div>
 </section>
 
@@ -48,7 +48,7 @@
                         </div>
 
                         <a class="button button-primary" href="{% url 'profile_detail' profile.id %}">
-                            Open
+                            View events
                         </a>
                     </div>
 

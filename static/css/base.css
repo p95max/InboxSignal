@@ -745,3 +745,110 @@ label {
         font-size: 30px;
     }
 }
+
+/* =========================
+   Event triage states
+   ========================= */
+
+.event-card.status-new {
+    border-color: rgba(79, 140, 255, 0.26);
+}
+
+.event-card.status-new::before {
+    background: linear-gradient(180deg, var(--primary), transparent);
+}
+
+.event-card.status-reviewed {
+    border-color: rgba(61, 220, 151, 0.26);
+    background:
+        linear-gradient(180deg, rgba(61, 220, 151, 0.055), rgba(255, 255, 255, 0.018)),
+        var(--card);
+}
+
+.event-card.status-reviewed::before {
+    background: linear-gradient(180deg, var(--success), transparent);
+}
+
+.event-card.status-ignored {
+    opacity: 0.68;
+    border-color: rgba(148, 163, 184, 0.12);
+    background:
+        linear-gradient(180deg, rgba(148, 163, 184, 0.035), rgba(255, 255, 255, 0.012)),
+        var(--card);
+}
+
+.event-card.status-ignored::before {
+    background: linear-gradient(180deg, var(--muted-soft), transparent);
+}
+
+.event-card.status-ignored .event-title,
+.event-card.status-ignored .event-message,
+.event-card.status-ignored .badge-row {
+    filter: grayscale(0.35);
+}
+
+.event-card.status-escalated {
+    border-color: rgba(255, 92, 122, 0.52);
+    background:
+        linear-gradient(180deg, rgba(255, 92, 122, 0.09), rgba(255, 255, 255, 0.018)),
+        var(--card);
+    box-shadow:
+        0 0 0 1px rgba(255, 92, 122, 0.08),
+        0 18px 50px rgba(255, 92, 122, 0.10),
+        var(--shadow-soft);
+}
+
+.event-card.status-escalated::before {
+    background: linear-gradient(180deg, var(--danger), transparent);
+    opacity: 1;
+}
+
+.event-card.status-escalated .event-title {
+    color: #ffd5dd;
+}
+
+.triage-state {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 38px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 700;
+    border: 1px solid var(--border);
+}
+
+.triage-state-reviewed {
+    border-color: rgba(61, 220, 151, 0.28);
+    background: var(--success-soft);
+    color: #88f3c2;
+}
+
+.triage-state-ignored {
+    border-color: rgba(148, 163, 184, 0.18);
+    background: rgba(148, 163, 184, 0.08);
+    color: var(--muted);
+}
+
+.triage-state-escalated {
+    border-color: rgba(255, 92, 122, 0.35);
+    background: var(--danger-soft);
+    color: #ff9caf;
+}
+
+.priority-urgent.status-new {
+    border-color: rgba(255, 92, 122, 0.38);
+}
+
+.priority-urgent.status-new::before {
+    background: linear-gradient(180deg, var(--danger), transparent);
+}
+
+.priority-important.status-new {
+    border-color: rgba(246, 196, 83, 0.32);
+}
+
+.priority-important.status-new::before {
+    background: linear-gradient(180deg, var(--warning), transparent);
+}
