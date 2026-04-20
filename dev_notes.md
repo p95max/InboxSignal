@@ -45,8 +45,33 @@ docker compose logs -f celery_worker
 ```bash
 docker compose run --rm -e RUN_MIGRATIONS=0 web pytest
 ```
-
+```bash
 docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhook set \
   --source-id 1 \
   --base-url https://identify-symbols-often-suggested.trycloudflare.com     \
   --drop-pending-updates
+```
+# Telegram polling for local development
+
+Webhook requires public HTTPS URL. For local development use polling.
+
+## Disable webhook before polling
+
+```bash
+docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhook delete \
+  --source-id 1 \
+  --drop-pending-updates
+```  
+# Start polling
+```bash
+docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_poll \
+  --source-id 1 \
+  --drop-pending-updates
+```
+
+# One-time polling check
+```bash
+docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_poll \
+  --source-id 1 \
+  --once
+```
