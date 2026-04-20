@@ -5,6 +5,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from urllib.parse import urlencode
 
 from apps.monitoring.models import Event, MonitoringProfile
 
@@ -73,6 +74,19 @@ def dashboard_view(request):
         },
     )
 
+def filter_archived_events_by_decision(events, decision: str):
+    """Filter archived events by the decision made before archiving."""
+
+    if decision == "reviewed":
+        return events.filter(reviewed_at__isnull=False)
+
+    if decision == "ignored":
+        return events.filter(ignored_at__isnull=False)
+
+    if decision == "escalated":
+        return events.filter(escalated_at__isnull=False)
+
+    return events
 
 @login_required
 def profile_detail_view(request, profile_id: int):
@@ -89,6 +103,16 @@ def profile_detail_view(request, profile_id: int):
     if profile is None:
         raise Http404("Monitoring profile was not found.")
 
+    selected_priority = request.GET.get("priority", "")
+    selected_status = request.GET.get("status", "")
+    selected_category = request.GET.get("category", "")
+    selected_archive_decision = request.GET.get("decision", "")
+
+    valid_priorities = {choice.value for choice in Event.Priority}
+    valid_statuses = {choice.value for choice in Event.Status}
+    valid_categories = {choice.value for choice in Event.Category}
+    valid_archive_decisions = {"reviewed", "ignored", "escalated"}
+
     events = (
         Event.objects.select_related(
             "incoming_message",
@@ -97,14 +121,6 @@ def profile_detail_view(request, profile_id: int):
         .filter(profile=profile)
         .order_by("-created_at")
     )
-
-    selected_priority = request.GET.get("priority", "")
-    selected_status = request.GET.get("status", "")
-    selected_category = request.GET.get("category", "")
-
-    valid_priorities = {choice.value for choice in Event.Priority}
-    valid_statuses = {choice.value for choice in Event.Status}
-    valid_categories = {choice.value for choice in Event.Category}
 
     if selected_priority in valid_priorities:
         events = events.filter(priority=selected_priority)
@@ -117,21 +133,193 @@ def profile_detail_view(request, profile_id: int):
         selected_status = ""
         events = events.exclude(status=Event.Status.ARCHIVED)
 
-    if selected_status in valid_statuses:
-        events = events.filter(status=selected_status)
-    else:
-        selected_status = ""
-
     if selected_category in valid_categories:
         events = events.filter(category=selected_category)
     else:
         selected_category = ""
 
-    if selected_status in valid_statuses:
-        events = events.filter(status=selected_status)
+    if selected_status == Event.Status.ARCHIVED:
+        if selected_archive_decision in valid_archive_decisions:
+            events = filter_archived_events_by_decision(
+                events,
+                selected_archive_decision,
+            )
+        else:
+            selected_archive_decision = ""
     else:
-        selected_status = ""
-        events = events.exclude(status=Event.Status.ARCHIVED)
+        selected_archive_decision = ""
+
+    counter_events = Event.objects.filter(profile=profile)
+
+    if selected_status in valid_statuses:
+        counter_events = counter_events.filter(status=selected_status)
+    else:
+        counter_events = counter_events.exclude(status=Event.Status.ARCHIVED)
+
+    if selected_priority in valid_priorities:
+        counter_events = counter_events.filter(priority=selected_priority)
+
+    if selected_status == Event.Status.ARCHIVED:
+        if selected_archive_decision in valid_archive_decisions:
+            counter_events = filter_archived_events_by_decision(
+                counter_events,
+                selected_archive_decision,
+            )
+
+    category_counts = counter_events.aggregate(
+        total=Count("id"),
+        lead=Count("id", filter=Q(category=Event.Category.LEAD)),
+        complaint=Count("id", filter=Q(category=Event.Category.COMPLAINT)),
+        request=Count("id", filter=Q(category=Event.Category.REQUEST)),
+        info=Count("id", filter=Q(category=Event.Category.INFO)),
+        spam=Count("id", filter=Q(category=Event.Category.SPAM)),
+    )
+
+    def build_category_url(category: str = "") -> str:
+        query_params = {}
+
+        if selected_priority:
+            query_params["priority"] = selected_priority
+
+        if selected_status:
+            query_params["status"] = selected_status
+
+        if selected_archive_decision:
+            query_params["decision"] = selected_archive_decision
+
+        if category:
+            query_params["category"] = category
+
+        query_string = urlencode(query_params)
+        base_url = reverse(
+            "profile_detail",
+            kwargs={"profile_id": profile.id},
+        )
+
+        if not query_string:
+            return base_url
+
+        return f"{base_url}?{query_string}"
+
+    category_stats = [
+        {
+            "label": "All",
+            "value": "",
+            "count": category_counts["total"],
+            "url": build_category_url(""),
+            "is_active": selected_category == "",
+            "css_class": "category-stat-all",
+        },
+        {
+            "label": "Leads",
+            "value": Event.Category.LEAD,
+            "count": category_counts["lead"],
+            "url": build_category_url(Event.Category.LEAD),
+            "is_active": selected_category == Event.Category.LEAD,
+            "css_class": "category-stat-lead",
+        },
+        {
+            "label": "Complaints",
+            "value": Event.Category.COMPLAINT,
+            "count": category_counts["complaint"],
+            "url": build_category_url(Event.Category.COMPLAINT),
+            "is_active": selected_category == Event.Category.COMPLAINT,
+            "css_class": "category-stat-complaint",
+        },
+        {
+            "label": "Requests",
+            "value": Event.Category.REQUEST,
+            "count": category_counts["request"],
+            "url": build_category_url(Event.Category.REQUEST),
+            "is_active": selected_category == Event.Category.REQUEST,
+            "css_class": "category-stat-request",
+        },
+        {
+            "label": "Info",
+            "value": Event.Category.INFO,
+            "count": category_counts["info"],
+            "url": build_category_url(Event.Category.INFO),
+            "is_active": selected_category == Event.Category.INFO,
+            "css_class": "category-stat-info",
+        },
+        {
+            "label": "Spam",
+            "value": Event.Category.SPAM,
+            "count": category_counts["spam"],
+            "url": build_category_url(Event.Category.SPAM),
+            "is_active": selected_category == Event.Category.SPAM,
+            "css_class": "category-stat-spam",
+        },
+    ]
+
+    archived_events = Event.objects.filter(
+        profile=profile,
+        status=Event.Status.ARCHIVED,
+    )
+
+    archive_decision_counts = archived_events.aggregate(
+        total=Count("id"),
+        reviewed=Count("id", filter=Q(reviewed_at__isnull=False)),
+        ignored=Count("id", filter=Q(ignored_at__isnull=False)),
+        escalated=Count("id", filter=Q(escalated_at__isnull=False)),
+    )
+
+    def build_archive_decision_url(decision: str = "") -> str:
+        query_params = {
+            "status": Event.Status.ARCHIVED,
+        }
+
+        if selected_priority:
+            query_params["priority"] = selected_priority
+
+        if selected_category:
+            query_params["category"] = selected_category
+
+        if decision:
+            query_params["decision"] = decision
+
+        query_string = urlencode(query_params)
+        base_url = reverse(
+            "profile_detail",
+            kwargs={"profile_id": profile.id},
+        )
+
+        return f"{base_url}?{query_string}"
+
+    archive_decision_stats = [
+        {
+            "label": "All archived",
+            "value": "",
+            "count": archive_decision_counts["total"],
+            "url": build_archive_decision_url(""),
+            "is_active": selected_archive_decision == "",
+            "css_class": "archive-decision-all",
+        },
+        {
+            "label": "Reviewed",
+            "value": "reviewed",
+            "count": archive_decision_counts["reviewed"],
+            "url": build_archive_decision_url("reviewed"),
+            "is_active": selected_archive_decision == "reviewed",
+            "css_class": "archive-decision-reviewed",
+        },
+        {
+            "label": "Ignored",
+            "value": "ignored",
+            "count": archive_decision_counts["ignored"],
+            "url": build_archive_decision_url("ignored"),
+            "is_active": selected_archive_decision == "ignored",
+            "css_class": "archive-decision-ignored",
+        },
+        {
+            "label": "Escalated",
+            "value": "escalated",
+            "count": archive_decision_counts["escalated"],
+            "url": build_archive_decision_url("escalated"),
+            "is_active": selected_archive_decision == "escalated",
+            "css_class": "archive-decision-escalated",
+        },
+    ]
 
     events = events[:100]
 
@@ -141,9 +329,12 @@ def profile_detail_view(request, profile_id: int):
         {
             "profile": profile,
             "events": events,
+            "category_stats": category_stats,
+            "archive_decision_stats": archive_decision_stats,
             "selected_priority": selected_priority,
             "selected_status": selected_status,
             "selected_category": selected_category,
+            "selected_archive_decision": selected_archive_decision,
             "priority_choices": Event.Priority.choices,
             "status_choices": Event.Status.choices,
             "category_choices": Event.Category.choices,
