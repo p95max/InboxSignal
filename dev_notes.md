@@ -36,3 +36,7 @@ docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py shell
 
 # celery logs
 docker compose logs -f celery_worker
+
+# pytest
+## all tests
+docker compose run --rm -e RUN_MIGRATIONS=0 web pytest
