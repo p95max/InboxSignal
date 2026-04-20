@@ -10,22 +10,22 @@
 
 <section class="grid grid-4">
     <div class="card">
-        <div class="stat-value">{{ stats.today }}</div>
-        <div class="stat-label">Today</div>
+        <div class="stat-value">{{ stats.today_total }}</div>
+        <div class="stat-label">Today total</div>
     </div>
 
     <div class="card">
-        <div class="stat-value">{{ stats.urgent }}</div>
+        <div class="stat-value">{{ stats.urgent_open }}</div>
         <div class="stat-label">Urgent open</div>
     </div>
 
     <div class="card">
-        <div class="stat-value">{{ stats.important }}</div>
+        <div class="stat-value">{{ stats.important_open }}</div>
         <div class="stat-label">Important open</div>
     </div>
 
     <div class="card">
-        <div class="stat-value">{{ stats.new }}</div>
+        <div class="stat-value">{{ stats.open_total }}</div>
         <div class="stat-label">Open events</div>
     </div>
 </section>
@@ -53,9 +53,9 @@
                     </div>
 
                     <div class="badge-row">
-                        <span class="badge badge-danger">Urgent: {{ profile.urgent_events_count }}</span>
-                        <span class="badge badge-warning">Important: {{ profile.important_events_count }}</span>
-                        <span class="badge">New: {{ profile.new_events_count }}</span>
+                        <span class="badge badge-danger">Urgent open: {{ profile.urgent_open_events_count }}</span>
+                        <span class="badge badge-warning">Important open: {{ profile.important_open_events_count }}</span>
+                        <span class="badge">Open: {{ profile.open_events_count }}</span>
                         <span class="badge badge-muted">Total: {{ profile.events_total }}</span>
                     </div>
 

@@ -142,3 +142,117 @@ def test_event_action_marks_event_reviewed(
     assert response.status_code == 302
     assert ui_event.status == Event.Status.REVIEWED
     assert ui_event.reviewed_at is not None
+
+@pytest.mark.django_db
+def test_profile_detail_defaults_to_new_events_only(
+    client,
+    user,
+    monitoring_profile,
+):
+    client.force_login(user)
+
+    new_message = IncomingMessage.objects.create(
+        profile=monitoring_profile,
+        channel=IncomingMessage.Channel.TELEGRAM,
+        external_source_id="test-bot",
+        external_chat_id="chat-new",
+        external_message_id="msg-new",
+        text="Das Produkt ist kaputt und funktioniert nicht.",
+    )
+    Event.objects.create(
+        profile=monitoring_profile,
+        incoming_message=new_message,
+        category=Event.Category.COMPLAINT,
+        priority_score=85,
+        title="Open urgent complaint",
+        summary="Open event.",
+    )
+
+    reviewed_message = IncomingMessage.objects.create(
+        profile=monitoring_profile,
+        channel=IncomingMessage.Channel.TELEGRAM,
+        external_source_id="test-bot",
+        external_chat_id="chat-reviewed",
+        external_message_id="msg-reviewed",
+        text="Already reviewed message.",
+    )
+    reviewed_event = Event.objects.create(
+        profile=monitoring_profile,
+        incoming_message=reviewed_message,
+        category=Event.Category.REQUEST,
+        priority_score=60,
+        title="Reviewed request",
+        summary="Reviewed event.",
+    )
+    reviewed_event.mark_reviewed()
+
+    response = client.get(
+        reverse(
+            "profile_detail",
+            kwargs={"profile_id": monitoring_profile.id},
+        )
+    )
+
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert "Open urgent complaint" in content
+    assert "Reviewed request" not in content
+
+
+@pytest.mark.django_db
+def test_profile_detail_status_all_shows_all_events(
+    client,
+    user,
+    monitoring_profile,
+):
+    client.force_login(user)
+
+    new_message = IncomingMessage.objects.create(
+        profile=monitoring_profile,
+        channel=IncomingMessage.Channel.TELEGRAM,
+        external_source_id="test-bot",
+        external_chat_id="chat-new-all",
+        external_message_id="msg-new-all",
+        text="Open message.",
+    )
+    Event.objects.create(
+        profile=monitoring_profile,
+        incoming_message=new_message,
+        category=Event.Category.COMPLAINT,
+        priority_score=85,
+        title="Open event visible",
+        summary="Open event.",
+    )
+
+    ignored_message = IncomingMessage.objects.create(
+        profile=monitoring_profile,
+        channel=IncomingMessage.Channel.TELEGRAM,
+        external_source_id="test-bot",
+        external_chat_id="chat-ignored-all",
+        external_message_id="msg-ignored-all",
+        text="Ignored message.",
+    )
+    ignored_event = Event.objects.create(
+        profile=monitoring_profile,
+        incoming_message=ignored_message,
+        category=Event.Category.INFO,
+        priority_score=30,
+        title="Ignored event visible",
+        summary="Ignored event.",
+    )
+    ignored_event.mark_ignored()
+
+    response = client.get(
+        reverse(
+            "profile_detail",
+            kwargs={"profile_id": monitoring_profile.id},
+        ),
+        {"status": ""},
+    )
+
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert "Open event visible" in content
+    assert "Ignored event visible" in content

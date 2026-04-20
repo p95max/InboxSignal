@@ -21,30 +21,25 @@ def dashboard_view(request):
     )
 
     user_events = Event.objects.filter(profile__owner=request.user)
+    open_events = user_events.filter(status=Event.Status.NEW)
 
     stats = {
-        "today": user_events.filter(created_at__gte=today_start).count(),
-        "urgent": user_events.filter(
-            priority=Event.Priority.URGENT,
-            status=Event.Status.NEW,
-        ).count(),
-        "important": user_events.filter(
-            priority=Event.Priority.IMPORTANT,
-            status=Event.Status.NEW,
-        ).count(),
-        "new": user_events.filter(status=Event.Status.NEW).count(),
+        "today_total": user_events.filter(created_at__gte=today_start).count(),
+        "urgent_open": open_events.filter(priority=Event.Priority.URGENT).count(),
+        "important_open": open_events.filter(priority=Event.Priority.IMPORTANT).count(),
+        "open_total": open_events.count(),
     }
 
     profiles = (
         MonitoringProfile.objects.filter(owner=request.user)
         .annotate(
             events_total=Count("events", distinct=True),
-            new_events_count=Count(
+            open_events_count=Count(
                 "events",
                 filter=Q(events__status=Event.Status.NEW),
                 distinct=True,
             ),
-            urgent_events_count=Count(
+            urgent_open_events_count=Count(
                 "events",
                 filter=Q(
                     events__priority=Event.Priority.URGENT,
@@ -52,7 +47,7 @@ def dashboard_view(request):
                 ),
                 distinct=True,
             ),
-            important_events_count=Count(
+            important_open_events_count=Count(
                 "events",
                 filter=Q(
                     events__priority=Event.Priority.IMPORTANT,
@@ -99,21 +94,40 @@ def profile_detail_view(request, profile_id: int):
     )
 
     selected_priority = request.GET.get("priority", "")
-    selected_status = request.GET.get("status", "")
     selected_category = request.GET.get("category", "")
 
     valid_priorities = {choice.value for choice in Event.Priority}
     valid_statuses = {choice.value for choice in Event.Status}
     valid_categories = {choice.value for choice in Event.Category}
 
+    # Default mode:
+    # /profiles/<id>/ -> only open/new events.
+    #
+    # Explicit all mode:
+    # /profiles/<id>/?status= -> all events.
+    if "status" not in request.GET:
+        selected_status = Event.Status.NEW
+        events = events.filter(status=Event.Status.NEW)
+    else:
+        selected_status = request.GET.get("status", "")
+
+        if selected_status in valid_statuses:
+            events = events.filter(status=selected_status)
+        elif selected_status:
+            selected_status = Event.Status.NEW
+            events = events.filter(status=Event.Status.NEW)
+        else:
+            selected_status = ""
+
     if selected_priority in valid_priorities:
         events = events.filter(priority=selected_priority)
-
-    if selected_status in valid_statuses:
-        events = events.filter(status=selected_status)
+    else:
+        selected_priority = ""
 
     if selected_category in valid_categories:
         events = events.filter(category=selected_category)
+    else:
+        selected_category = ""
 
     events = events[:100]
 
