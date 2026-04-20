@@ -17,6 +17,11 @@ urlpatterns = [
         name="profile_event_list_api",
     ),
     path(
+        "profiles/<int:profile_id>/",
+        api.profile_detail_api,
+        name="profile_detail_api",
+    ),
+    path(
         "events/<uuid:event_id>/review/",
         api.event_review_api,
         name="event_review_api",

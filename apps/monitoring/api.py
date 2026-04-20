@@ -1,10 +1,57 @@
+import json
 from functools import wraps
 from typing import Callable
 
+from django.core.exceptions import ValidationError
 from django.http import HttpRequest, JsonResponse
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import (
+    require_GET,
+    require_POST,
+    require_http_methods,
+)
 
 from apps.monitoring.models import Event, MonitoringProfile
+
+
+PROFILE_MUTABLE_FIELDS = {
+    "name",
+    "scenario",
+    "status",
+    "business_context",
+    "track_leads",
+    "track_complaints",
+    "track_requests",
+    "track_urgent",
+    "track_general_activity",
+    "ignore_greetings",
+    "ignore_short_replies",
+    "ignore_emojis",
+    "urgent_negative",
+    "urgent_deadlines",
+    "urgent_repeated_messages",
+    "extract_name",
+    "extract_contact",
+    "extract_budget",
+    "extract_product_or_service",
+}
+
+PROFILE_BOOLEAN_FIELDS = {
+    "track_leads",
+    "track_complaints",
+    "track_requests",
+    "track_urgent",
+    "track_general_activity",
+    "ignore_greetings",
+    "ignore_short_replies",
+    "ignore_emojis",
+    "urgent_negative",
+    "urgent_deadlines",
+    "urgent_repeated_messages",
+    "extract_name",
+    "extract_contact",
+    "extract_budget",
+    "extract_product_or_service",
+}
 
 
 def api_login_required(view_func: Callable):
@@ -26,24 +73,304 @@ def api_login_required(view_func: Callable):
     return wrapper
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 @api_login_required
 def profile_list_api(request: HttpRequest) -> JsonResponse:
-    """Return monitoring profiles owned by the authenticated user."""
+    """List or create monitoring profiles owned by the authenticated user."""
 
-    profiles = (
-        MonitoringProfile.objects.filter(owner=request.user)
-        .order_by("-updated_at")
+    if request.method == "POST":
+        return create_profile_api(request)
+
+    profiles = MonitoringProfile.objects.filter(owner=request.user).order_by(
+        "-updated_at"
     )
 
     return JsonResponse(
         {
             "ok": True,
-            "profiles": [
-                serialize_profile(profile)
-                for profile in profiles
-            ],
+            "profiles": [serialize_profile(profile) for profile in profiles],
         }
+    )
+
+
+@require_http_methods(["GET", "PATCH", "DELETE"])
+@api_login_required
+def profile_detail_api(
+    request: HttpRequest,
+    profile_id: int,
+) -> JsonResponse:
+    """Return, update or delete one monitoring profile owned by the user."""
+
+    profile = get_owned_profile(
+        request=request,
+        profile_id=profile_id,
+    )
+
+    if profile is None:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "not_found",
+            },
+            status=404,
+        )
+
+    if request.method == "GET":
+        return JsonResponse(
+            {
+                "ok": True,
+                "profile": serialize_profile(profile),
+            }
+        )
+
+    if request.method == "PATCH":
+        return update_profile_api(
+            request=request,
+            profile=profile,
+        )
+
+    if request.method == "DELETE":
+        profile.delete()
+
+        return JsonResponse(
+            {
+                "ok": True,
+                "deleted": True,
+            }
+        )
+
+    return JsonResponse(
+        {
+            "ok": False,
+            "error": "method_not_allowed",
+        },
+        status=405,
+    )
+
+
+def create_profile_api(request: HttpRequest) -> JsonResponse:
+    """Create monitoring profile for authenticated user."""
+
+    payload, error_response = parse_json_body(request)
+
+    if error_response:
+        return error_response
+
+    cleaned_data, errors = validate_profile_payload(
+        payload=payload,
+        partial=False,
+    )
+
+    if errors:
+        return validation_error_response(errors)
+
+    profile = MonitoringProfile(
+        owner=request.user,
+        **cleaned_data,
+    )
+
+    try:
+        profile.full_clean()
+        profile.save()
+    except ValidationError as exc:
+        return validation_error_response(exc.message_dict)
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "profile": serialize_profile(profile),
+        },
+        status=201,
+    )
+
+
+def update_profile_api(
+    *,
+    request: HttpRequest,
+    profile: MonitoringProfile,
+) -> JsonResponse:
+    """Update monitoring profile owned by authenticated user."""
+
+    payload, error_response = parse_json_body(request)
+
+    if error_response:
+        return error_response
+
+    cleaned_data, errors = validate_profile_payload(
+        payload=payload,
+        partial=True,
+    )
+
+    if errors:
+        return validation_error_response(errors)
+
+    for field_name, value in cleaned_data.items():
+        setattr(profile, field_name, value)
+
+    try:
+        profile.full_clean()
+        profile.save(
+            update_fields=[
+                *cleaned_data.keys(),
+                "updated_at",
+            ]
+        )
+    except ValidationError as exc:
+        return validation_error_response(exc.message_dict)
+
+    profile.refresh_from_db()
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "profile": serialize_profile(profile),
+        }
+    )
+
+
+def get_owned_profile(
+    *,
+    request: HttpRequest,
+    profile_id: int,
+) -> MonitoringProfile | None:
+    """Return profile owned by request.user or None."""
+
+    return (
+        MonitoringProfile.objects.filter(
+            id=profile_id,
+            owner=request.user,
+        )
+        .first()
+    )
+
+
+def parse_json_body(request: HttpRequest) -> tuple[dict, JsonResponse | None]:
+    """Parse JSON request body and return payload or JSON error response."""
+
+    if not request.body:
+        return {}, None
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return {}, JsonResponse(
+            {
+                "ok": False,
+                "error": "invalid_json",
+            },
+            status=400,
+        )
+
+    if not isinstance(payload, dict):
+        return {}, JsonResponse(
+            {
+                "ok": False,
+                "error": "invalid_payload",
+                "details": {
+                    "body": "JSON body must be an object.",
+                },
+            },
+            status=400,
+        )
+
+    return payload, None
+
+
+def validate_profile_payload(
+    *,
+    payload: dict,
+    partial: bool,
+) -> tuple[dict, dict]:
+    """Validate profile create/update payload."""
+
+    errors = {}
+    cleaned_data = {}
+
+    unknown_fields = sorted(set(payload) - PROFILE_MUTABLE_FIELDS)
+
+    if unknown_fields:
+        errors["unknown_fields"] = unknown_fields
+
+    if not partial and not payload.get("name"):
+        errors["name"] = "This field is required."
+
+    for field_name, value in payload.items():
+        if field_name not in PROFILE_MUTABLE_FIELDS:
+            continue
+
+        if field_name in PROFILE_BOOLEAN_FIELDS:
+            if not isinstance(value, bool):
+                errors[field_name] = "Expected boolean value."
+                continue
+
+            cleaned_data[field_name] = value
+            continue
+
+        if field_name == "name":
+            if not isinstance(value, str):
+                errors[field_name] = "Expected string value."
+                continue
+
+            value = value.strip()
+
+            if not value:
+                errors[field_name] = "This field cannot be blank."
+                continue
+
+            if len(value) > 120:
+                errors[field_name] = "Must be 120 characters or fewer."
+                continue
+
+            cleaned_data[field_name] = value
+            continue
+
+        if field_name == "business_context":
+            if not isinstance(value, str):
+                errors[field_name] = "Expected string value."
+                continue
+
+            value = value.strip()
+
+            if len(value) > 300:
+                errors[field_name] = "Must be 300 characters or fewer."
+                continue
+
+            cleaned_data[field_name] = value
+            continue
+
+        if field_name == "scenario":
+            valid_scenarios = {choice.value for choice in MonitoringProfile.Scenario}
+
+            if value not in valid_scenarios:
+                errors[field_name] = "Unsupported scenario."
+                continue
+
+            cleaned_data[field_name] = value
+            continue
+
+        if field_name == "status":
+            valid_statuses = {choice.value for choice in MonitoringProfile.Status}
+
+            if value not in valid_statuses:
+                errors[field_name] = "Unsupported status."
+                continue
+
+            cleaned_data[field_name] = value
+            continue
+
+    return cleaned_data, errors
+
+
+def validation_error_response(errors: dict) -> JsonResponse:
+    """Return normalized validation error response."""
+
+    return JsonResponse(
+        {
+            "ok": False,
+            "error": "validation_error",
+            "details": errors,
+        },
+        status=400,
     )
 
 
@@ -55,12 +382,9 @@ def profile_event_list_api(
 ) -> JsonResponse:
     """Return events for one monitoring profile owned by the authenticated user."""
 
-    profile = (
-        MonitoringProfile.objects.filter(
-            id=profile_id,
-            owner=request.user,
-        )
-        .first()
+    profile = get_owned_profile(
+        request=request,
+        profile_id=profile_id,
     )
 
     if profile is None:
@@ -106,10 +430,7 @@ def profile_event_list_api(
         {
             "ok": True,
             "profile": serialize_profile(profile),
-            "events": [
-                serialize_event(event)
-                for event in events
-            ],
+            "events": [serialize_event(event) for event in events],
         }
     )
 
@@ -228,6 +549,16 @@ def serialize_profile(profile: MonitoringProfile) -> dict:
         "track_requests": profile.track_requests,
         "track_urgent": profile.track_urgent,
         "track_general_activity": profile.track_general_activity,
+        "ignore_greetings": profile.ignore_greetings,
+        "ignore_short_replies": profile.ignore_short_replies,
+        "ignore_emojis": profile.ignore_emojis,
+        "urgent_negative": profile.urgent_negative,
+        "urgent_deadlines": profile.urgent_deadlines,
+        "urgent_repeated_messages": profile.urgent_repeated_messages,
+        "extract_name": profile.extract_name,
+        "extract_contact": profile.extract_contact,
+        "extract_budget": profile.extract_budget,
+        "extract_product_or_service": profile.extract_product_or_service,
         "last_event_at": isoformat_or_none(profile.last_event_at),
         "created_at": isoformat_or_none(profile.created_at),
         "updated_at": isoformat_or_none(profile.updated_at),
