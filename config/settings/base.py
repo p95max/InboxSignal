@@ -126,11 +126,11 @@ AI_MIN_TEXT_LENGTH = env.int("AI_MIN_TEXT_LENGTH", default=12)
 
 ALERT_COOLDOWN_URGENT_SECONDS = env.int(
     "ALERT_COOLDOWN_URGENT_SECONDS",
-    default=300,
+    default=0,
 )
 ALERT_COOLDOWN_IMPORTANT_SECONDS = env.int(
     "ALERT_COOLDOWN_IMPORTANT_SECONDS",
-    default=900,
+    default=0,
 )
 
 REDIS_CACHE_URL = env("REDIS_CACHE_URL", default="redis://redis:6379/2")

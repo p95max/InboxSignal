@@ -63,32 +63,53 @@ def send_telegram_alert(alert: AlertDelivery) -> AlertDelivery:
 
 
 def build_telegram_alert_text(alert: AlertDelivery) -> str:
-    """Build human-readable Telegram alert text."""
+    """Build a compact internal Telegram alert text."""
 
-    payload = alert.payload or {}
     event = alert.event
+    incoming_message = event.incoming_message
 
-    category = payload.get("category") or event.category
-    priority = payload.get("priority") or event.priority
-    score = payload.get("priority_score") or event.priority_score
-    title = payload.get("title") or event.title or "New monitoring event"
-    summary = payload.get("summary") or event.summary
-    message = payload.get("message") or event.message_text_snapshot
+    contact_label = "Unknown contact"
+
+    if incoming_message:
+        if incoming_message.external_contact:
+            contact = incoming_message.external_contact
+            contact_label = (
+                contact.display_name
+                or (f"@{contact.username}" if contact.username else "")
+                or contact.external_user_id
+                or contact.external_chat_id
+                or "Unknown contact"
+            )
+        else:
+            contact_label = (
+                incoming_message.sender_display_name
+                or (f"@{incoming_message.sender_username}" if incoming_message.sender_username else "")
+                or incoming_message.sender_id
+                or incoming_message.external_chat_id
+                or "Unknown contact"
+            )
+
+    message_preview = (event.message_text_snapshot or "").strip()
+    if len(message_preview) > 180:
+        message_preview = f"{message_preview[:180].rstrip()}..."
+
+    title = f"{event.priority.upper()} {event.category}"
 
     parts = [
-        "🚨 New monitoring alert",
+        f"🚨 {title}",
         "",
-        f"Title: {title}",
-        f"Category: {category}",
-        f"Priority: {priority}",
-        f"Score: {score}",
+        f"Profile: {event.profile.name}",
+        f"From: {contact_label}",
+        f"Score: {event.priority_score}",
     ]
 
-    if summary:
-        parts.extend(["", f"Summary: {summary}"])
-
-    if message:
-        parts.extend(["", "Message:", message[:1000]])
+    if message_preview:
+        parts.extend(
+            [
+                "",
+                f"Your message: {message_preview}",
+            ]
+        )
 
     return "\n".join(parts)
 

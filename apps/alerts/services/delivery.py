@@ -100,18 +100,17 @@ def create_alert_delivery_for_event(event: Event) -> AlertDelivery | None:
 
 
 def get_default_recipient(event: Event) -> str:
-    """Return default recipient for MVP alert delivery.
-
-    For now this is a placeholder. Later it should come from ConnectedSource
-    or user notification settings.
-    """
+    """Return internal alert recipient for MVP alert delivery."""
 
     message = event.incoming_message
 
-    if message and message.external_chat_id:
-        return message.external_chat_id
+    if message is None or message.source is None:
+        return ""
 
-    return ""
+    metadata = message.source.metadata or {}
+    alert_chat_id = metadata.get("alert_chat_id", "")
+
+    return str(alert_chat_id).strip()
 
 
 def build_alert_payload(event: Event) -> dict:
