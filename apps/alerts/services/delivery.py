@@ -84,7 +84,6 @@ def create_alert_delivery_for_event(event: Event) -> AlertDelivery | None:
 
     set_alert_cooldown(event, recipient)
 
-
     logger.info(
         "alert_delivery_created",
         extra={

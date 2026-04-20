@@ -3,6 +3,7 @@ import pytest
 from apps.accounts.models import User
 from apps.monitoring.models import MonitoringProfile
 
+from django.core.cache import cache
 
 @pytest.fixture(autouse=True)
 def allow_testserver(settings):
@@ -10,6 +11,12 @@ def allow_testserver(settings):
 
     if "testserver" not in settings.ALLOWED_HOSTS:
         settings.ALLOWED_HOSTS.append("testserver")
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture
