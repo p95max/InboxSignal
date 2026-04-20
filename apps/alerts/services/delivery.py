@@ -1,19 +1,40 @@
+import logging
+
 from apps.alerts.models import AlertDelivery
 from apps.monitoring.models import Event
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_alert_delivery_for_event(event: Event) -> AlertDelivery | None:
     """Create alert delivery record for important or urgent events."""
 
     if event.priority == Event.Priority.IGNORE:
+        logger.info(
+            "alert_delivery_skipped_ignore_priority",
+            extra={
+                "event_id": str(event.id),
+                "profile_id": event.profile_id,
+                "priority": event.priority,
+            },
+        )
         return None
 
     recipient = get_default_recipient(event)
 
     if not recipient:
+        logger.warning(
+            "alert_delivery_skipped_missing_recipient",
+            extra={
+                "event_id": str(event.id),
+                "profile_id": event.profile_id,
+                "priority": event.priority,
+            },
+        )
         return None
 
-    alert, _created = AlertDelivery.objects.get_or_create(
+    alert, created = AlertDelivery.objects.get_or_create(
         profile=event.profile,
         event=event,
         channel=AlertDelivery.Channel.TELEGRAM,
@@ -21,6 +42,18 @@ def create_alert_delivery_for_event(event: Event) -> AlertDelivery | None:
         recipient=recipient,
         defaults={
             "payload": build_alert_payload(event),
+        },
+    )
+
+    logger.info(
+        "alert_delivery_created" if created else "alert_delivery_reused",
+        extra={
+            "alert_id": str(alert.id),
+            "event_id": str(event.id),
+            "profile_id": event.profile_id,
+            "channel": alert.channel,
+            "delivery_type": alert.delivery_type,
+            "status": alert.status,
         },
     )
 
