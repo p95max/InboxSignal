@@ -7,6 +7,12 @@ from apps.alerts.services.delivery import create_alert_delivery_for_event
 from apps.monitoring.models import Event, IncomingMessage
 from apps.monitoring.services.rules import analyze_message_by_rules
 from apps.alerts.tasks import send_alert_delivery_task
+from apps.ai.models import AIAnalysisResult
+from apps.ai.services.analyzer import (
+    analyze_message_with_ai,
+    build_rule_analysis_from_ai_result,
+    should_use_ai,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -52,6 +58,47 @@ def process_incoming_message(message_id: str) -> Event | None:
                 profile=message.profile,
             )
 
+            detection_source = Event.DetectionSource.RULES
+            ai_result = None
+
+            if should_use_ai(
+                message=message,
+                rules_analysis=analysis,
+            ):
+                ai_result = analyze_message_with_ai(message)
+
+                if ai_result.status == AIAnalysisResult.Status.SUCCEEDED:
+                    ai_analysis = build_rule_analysis_from_ai_result(ai_result)
+
+                    if ai_analysis.should_create_event:
+                        analysis = ai_analysis
+                        detection_source = Event.DetectionSource.AI
+
+                    logger.info(
+                        "ai_analysis_applied"
+                        if ai_analysis.should_create_event
+                        else "ai_analysis_not_event_worthy",
+                        extra={
+                            "message_id": str(message.id),
+                            "profile_id": message.profile_id,
+                            "ai_result_id": str(ai_result.id),
+                            "ai_category": ai_result.category,
+                            "ai_priority_score": ai_result.priority_score,
+                            "applied": ai_analysis.should_create_event,
+                        },
+                    )
+
+                else:
+                    logger.info(
+                        "ai_analysis_fallback_to_rules",
+                        extra={
+                            "message_id": str(message.id),
+                            "profile_id": message.profile_id,
+                            "ai_result_id": str(ai_result.id),
+                            "ai_status": ai_result.status,
+                        },
+                    )
+
             if not analysis.should_create_event:
                 message.processing_status = IncomingMessage.ProcessingStatus.IGNORED
                 message.processing_error = ""
@@ -91,9 +138,17 @@ def process_incoming_message(message_id: str) -> Event | None:
                     summary=analysis.summary,
                     extracted_data=analysis.extracted_data,
                     rule_metadata=analysis.rule_metadata,
-                    detection_source=Event.DetectionSource.RULES,
+                    detection_source=detection_source,
                 )
                 event_created = True
+
+            if (
+                ai_result
+                and ai_result.status == AIAnalysisResult.Status.SUCCEEDED
+                and ai_result.event_id != event.id
+            ):
+                ai_result.event = event
+                ai_result.save(update_fields=["event"])
 
             logger.info(
                 "event_created" if event_created else "event_reused",

@@ -112,3 +112,10 @@ AUTH_USER_MODEL = "accounts.User"
 
 FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="")
 TELEGRAM_BOT_WEBHOOK_SECRET = env("TELEGRAM_BOT_WEBHOOK_SECRET", default="")
+
+AI_ENABLED = env.bool("AI_ENABLED", default=False)
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-4o-mini")
+AI_PROMPT_VERSION = env("AI_PROMPT_VERSION", default="ai_v1")
+AI_REQUEST_TIMEOUT = env.float("AI_REQUEST_TIMEOUT", default=20.0)
+AI_MIN_TEXT_LENGTH = env.int("AI_MIN_TEXT_LENGTH", default=12)
