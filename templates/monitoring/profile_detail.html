@@ -3,14 +3,35 @@
 {% block title %}{{ profile.name }} | Messaging Monitoring{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>{{ profile.name }}</h1>
-    <p>
-        {{ profile.get_scenario_display }} · {{ profile.get_status_display }}
-        {% if profile.business_context %}
-            · {{ profile.business_context }}
+<div class="page-header page-header-row">
+    <div>
+        <h1>
+            {% if selected_status == "archived" %}
+                Archive · {{ profile.name }}
+            {% else %}
+                {{ profile.name }}
+            {% endif %}
+        </h1>
+
+        <p>
+            {{ profile.get_scenario_display }} · {{ profile.get_status_display }}
+            {% if profile.business_context %}
+                · {{ profile.business_context }}
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="page-actions">
+        {% if selected_status == "archived" %}
+            <a class="button button-primary" href="{% url 'profile_detail' profile.id %}">
+                Back to events
+            </a>
+        {% else %}
+            <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
+                Open archive
+            </a>
         {% endif %}
-    </p>
+    </div>
 </div>
 
 <section class="card" style="margin-bottom: 20px;">
@@ -172,18 +193,40 @@
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
             <button class="button-danger" type="submit">Escalate</button>
         </form>
+
+        <button class="button button-disabled" type="button" disabled>
+            Archive locked
+        </button>
+
+        <div class="triage-hint">
+            Choose reviewed, ignored or escalated before archiving.
+        </div>
+
+    {% elif event.status == "archived" %}
+        <div class="triage-state triage-state-archived">
+            Archived. This event is no longer in active workflow.
+        </div>
+
     {% else %}
         <div class="triage-state triage-state-{{ event.status }}">
-            {% if event.status == "reviewed" %}
-                Reviewed. No further action required.
-            {% elif event.status == "ignored" %}
-                Ignored. This event is hidden from active triage.
-            {% elif event.status == "escalated" %}
-                Escalated. This event requires follow-up.
-            {% else %}
-                Status: {{ event.get_status_display }}
-            {% endif %}
+                {% if event.status == "reviewed" %}
+                    <span class="badge badge-success">{{ event.get_status_display }}</span>
+                {% elif event.status == "ignored" %}
+                    <span class="badge badge-muted">{{ event.get_status_display }}</span>
+                {% elif event.status == "escalated" %}
+                    <span class="badge badge-danger">{{ event.get_status_display }}</span>
+                {% elif event.status == "archived" %}
+                    <span class="badge badge-muted">{{ event.get_status_display }}</span>
+                {% else %}
+                    <span class="badge">{{ event.get_status_display }}</span>
+                {% endif %}
         </div>
+
+        <form method="post" action="{% url 'event_action' event.id 'archive' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="button" type="submit">Archive</button>
+        </form>
     {% endif %}
 </div>
 
@@ -191,7 +234,11 @@
         {% endfor %}
     {% else %}
         <div class="card empty-state">
-            No events for selected filters.
+            {% if selected_status == "archived" %}
+                No archived events yet.
+            {% else %}
+                No events for selected filters.
+            {% endif %}
         </div>
     {% endif %}
 </section>

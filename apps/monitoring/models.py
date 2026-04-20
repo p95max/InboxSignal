@@ -317,6 +317,7 @@ class Event(models.Model):
         REVIEWED = "reviewed", _("Reviewed")
         IGNORED = "ignored", _("Ignored")
         ESCALATED = "escalated", _("Escalated")
+        ARCHIVED = "archived", _("Archived")
 
     class DetectionSource(models.TextChoices):
         RULES = "rules", _("Rules")
@@ -391,6 +392,7 @@ class Event(models.Model):
     reviewed_at = models.DateTimeField(null=True, blank=True)
     ignored_at = models.DateTimeField(null=True, blank=True)
     escalated_at = models.DateTimeField(null=True, blank=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -469,6 +471,11 @@ class Event(models.Model):
         self.status = self.Status.ESCALATED
         self.escalated_at = timezone.now()
         self.save(update_fields=["status", "escalated_at", "updated_at"])
+
+    def mark_archived(self):
+        self.status = self.Status.ARCHIVED
+        self.archived_at = timezone.now()
+        self.save(update_fields=["status", "archived_at", "updated_at"])
 
     def __str__(self):
         return f"{self.category} / {self.priority} / {self.priority_score}"

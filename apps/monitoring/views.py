@@ -55,6 +55,11 @@ def dashboard_view(request):
                 ),
                 distinct=True,
             ),
+            archived_events_count=Count(
+                "events",
+                filter=Q(events__status=Event.Status.ARCHIVED),
+                distinct=True,
+            ),
         )
         .order_by("-last_event_at", "-updated_at")
     )
@@ -110,11 +115,23 @@ def profile_detail_view(request, profile_id: int):
         events = events.filter(status=selected_status)
     else:
         selected_status = ""
+        events = events.exclude(status=Event.Status.ARCHIVED)
+
+    if selected_status in valid_statuses:
+        events = events.filter(status=selected_status)
+    else:
+        selected_status = ""
 
     if selected_category in valid_categories:
         events = events.filter(category=selected_category)
     else:
         selected_category = ""
+
+    if selected_status in valid_statuses:
+        events = events.filter(status=selected_status)
+    else:
+        selected_status = ""
+        events = events.exclude(status=Event.Status.ARCHIVED)
 
     events = events[:100]
 
@@ -157,6 +174,11 @@ def event_action_view(request, event_id, action: str):
         event.mark_ignored()
     elif action == "escalate":
         event.mark_escalated()
+    elif action == "archive":
+        if event.status == Event.Status.NEW:
+            raise Http404("Event must be processed before archiving.")
+
+        event.mark_archived()
     else:
         raise Http404("Unsupported event action.")
 

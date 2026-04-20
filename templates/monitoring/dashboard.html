@@ -50,6 +50,10 @@
                         <a class="button button-primary" href="{% url 'profile_detail' profile.id %}">
                             View events
                         </a>
+
+                        <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
+                            Archive
+                        </a>
                     </div>
 
                     <div class="badge-row">
@@ -57,6 +61,7 @@
                         <span class="badge badge-warning">Important open: {{ profile.important_open_events_count }}</span>
                         <span class="badge">Open: {{ profile.open_events_count }}</span>
                         <span class="badge badge-muted">Total: {{ profile.events_total }}</span>
+                        <span class="badge badge-muted">Archived: {{ profile.archived_events_count }}</span>
                     </div>
 
                     <div class="muted">
