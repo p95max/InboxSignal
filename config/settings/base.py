@@ -128,3 +128,15 @@ ALERT_COOLDOWN_IMPORTANT_SECONDS = env.int(
     "ALERT_COOLDOWN_IMPORTANT_SECONDS",
     default=900,
 )
+
+REDIS_CACHE_URL = env("REDIS_CACHE_URL", default="redis://redis:6379/2")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_CACHE_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
