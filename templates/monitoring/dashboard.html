@@ -37,24 +37,27 @@
         <div class="grid grid-2">
             {% for profile in profiles %}
                 <article class="card profile-card">
+
                     <div class="profile-card-header">
-                        <div>
-                            <a class="profile-name" href="{% url 'profile_detail' profile.id %}">
-                                {{ profile.name }}
-                            </a>
-                            <div class="muted">
-                                {{ profile.get_scenario_display }} · {{ profile.get_status_display }}
-                            </div>
-                        </div>
+    <div class="profile-card-title">
+        <a class="profile-name" href="{% url 'profile_detail' profile.id %}">
+            {{ profile.name }}
+        </a>
+        <div class="muted">
+            {{ profile.get_scenario_display }} · {{ profile.get_status_display }}
+        </div>
+    </div>
 
-                        <a class="button button-primary" href="{% url 'profile_detail' profile.id %}">
-                            View events
-                        </a>
+    <div class="profile-card-actions">
+        <a class="button button-primary" href="{% url 'profile_detail' profile.id %}">
+            View events
+        </a>
 
-                        <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
-                            Archive
-                        </a>
-                    </div>
+        <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
+            Archive
+        </a>
+    </div>
+</div>
 
                     <div class="badge-row">
                         <span class="badge badge-danger">Urgent open: {{ profile.urgent_open_events_count }}</span>
