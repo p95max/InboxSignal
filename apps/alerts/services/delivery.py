@@ -1,6 +1,10 @@
 import logging
 
 from apps.alerts.models import AlertDelivery
+from apps.alerts.services.cooldown import (
+    is_alert_in_cooldown,
+    set_alert_cooldown,
+)
 from apps.monitoring.models import Event
 
 
@@ -34,19 +38,54 @@ def create_alert_delivery_for_event(event: Event) -> AlertDelivery | None:
         )
         return None
 
-    alert, created = AlertDelivery.objects.get_or_create(
+    existing_alert = AlertDelivery.objects.filter(
         profile=event.profile,
         event=event,
         channel=AlertDelivery.Channel.TELEGRAM,
         delivery_type=AlertDelivery.DeliveryType.INSTANT,
         recipient=recipient,
-        defaults={
-            "payload": build_alert_payload(event),
-        },
+    ).first()
+
+    if existing_alert:
+        logger.info(
+            "alert_delivery_reused",
+            extra={
+                "alert_id": str(existing_alert.id),
+                "event_id": str(event.id),
+                "profile_id": event.profile_id,
+                "channel": existing_alert.channel,
+                "delivery_type": existing_alert.delivery_type,
+                "status": existing_alert.status,
+            },
+        )
+        return existing_alert
+
+    if is_alert_in_cooldown(event, recipient):
+        logger.info(
+            "alert_delivery_skipped_cooldown",
+            extra={
+                "event_id": str(event.id),
+                "profile_id": event.profile_id,
+                "category": event.category,
+                "priority": event.priority,
+                "recipient": recipient,
+            },
+        )
+        return None
+
+    alert = AlertDelivery.objects.create(
+        profile=event.profile,
+        event=event,
+        channel=AlertDelivery.Channel.TELEGRAM,
+        delivery_type=AlertDelivery.DeliveryType.INSTANT,
+        recipient=recipient,
+        payload=build_alert_payload(event),
     )
 
+    set_alert_cooldown(event, recipient)
+
     logger.info(
-        "alert_delivery_created" if created else "alert_delivery_reused",
+        "alert_delivery_created",
         extra={
             "alert_id": str(alert.id),
             "event_id": str(event.id),
