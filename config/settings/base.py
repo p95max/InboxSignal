@@ -94,6 +94,18 @@ LOGGING = {
         "handlers": ["console"],
         "level": "INFO",
     },
+    "loggers": {
+        "httpx": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "httpcore": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+    },
 }
 
 AUTH_USER_MODEL = "accounts.User"
