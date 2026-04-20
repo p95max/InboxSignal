@@ -31,12 +31,17 @@ docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py showmigrations
 ```
 
 # shell
+```bash
 docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py shell
-
+```
 
 # celery logs
+```bash
 docker compose logs -f celery_worker
+```
 
 # pytest
 ## all tests
+```bash
 docker compose run --rm -e RUN_MIGRATIONS=0 web pytest
+```
