@@ -1,6 +1,11 @@
 from django.contrib import admin
 
-from apps.monitoring.models import Event, ExternalContact, IncomingMessage, MonitoringProfile
+from apps.monitoring.models import (
+    Event,
+    ExternalContact,
+    IncomingMessage,
+    MonitoringProfile,
+)
 
 
 @admin.register(MonitoringProfile)
@@ -123,6 +128,7 @@ class ExternalContactAdmin(admin.ModelAdmin):
     )
     list_filter = (
         "channel",
+        "source",
         "created_at",
         "last_seen_at",
     )
