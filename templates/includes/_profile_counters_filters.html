@@ -4,7 +4,7 @@
             <div>
                 <h2 class="panel-title">Event overview</h2>
                 <p class="panel-description">
-                    Counters show active monitoring events by category. Use filters to narrow the list below.
+                    Use category, priority and status buttons to narrow the event list.
                 </p>
             </div>
 
@@ -13,59 +13,62 @@
             </a>
         </div>
 
-        <div class="category-stats category-stats-embedded">
-            {% for stat in category_stats %}
-                <a
-                    class="category-stat-card {{ stat.css_class }} {% if stat.is_active %}is-active{% endif %}"
-                    href="{{ stat.url }}"
-                >
-                    <span class="category-stat-label">{{ stat.label }}</span>
-                    <span class="category-stat-value">{{ stat.count }}</span>
-                </a>
-            {% endfor %}
+        <div class="filter-section">
+            <div class="filter-section-header">
+                <span class="filter-section-title">Category</span>
+                <span class="filter-section-description">What type of event is this?</span>
+            </div>
+
+            <div class="category-stats category-stats-embedded">
+                {% for stat in category_stats %}
+                    <a
+                        class="category-stat-card {{ stat.css_class }} {% if stat.is_active %}is-active{% endif %}"
+                        href="{{ stat.url }}"
+                    >
+                        <span class="category-stat-label">{{ stat.label }}</span>
+                        <span class="category-stat-value">{{ stat.count }}</span>
+                    </a>
+                {% endfor %}
+            </div>
         </div>
 
-        <form class="filters filters-embedded" method="get">
-            <div class="field">
-                <label for="priority">Priority</label>
-                <select id="priority" name="priority">
-                    <option value="" {% if selected_priority == "" %}selected{% endif %}>All priorities</option>
-                    {% for value, label in priority_choices %}
-                        <option value="{{ value }}" {% if selected_priority == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
+        <div class="filter-button-groups">
+            <div class="filter-button-group">
+                <div class="filter-section-header">
+                    <span class="filter-section-title">Priority</span>
+                    <span class="filter-section-description">How important is it?</span>
+                </div>
+
+                <div class="filter-pills">
+                    {% for option in priority_filter_options %}
+                        <a
+                            class="filter-pill {% if option.is_active %}is-active{% endif %}"
+                            href="{{ option.url }}"
+                        >
+                            {{ option.label }}
+                        </a>
                     {% endfor %}
-                </select>
+                </div>
             </div>
 
-            <div class="field">
-                <label for="status">Status</label>
-                <select id="status" name="status">
-                    <option value="" {% if selected_status == "" %}selected{% endif %}>All statuses</option>
-                    {% for value, label in status_choices %}
-                        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
+            <div class="filter-button-group">
+                <div class="filter-section-header">
+                    <span class="filter-section-title">Status</span>
+                    <span class="filter-section-description">Where is it in the workflow?</span>
+                </div>
 
-            <div class="field">
-                <label for="category">Category</label>
-                <select id="category" name="category">
-                    <option value="" {% if selected_category == "" %}selected{% endif %}>All categories</option>
-                    {% for value, label in category_choices %}
-                        <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
+                <div class="filter-pills">
+                    {% for option in status_filter_options %}
+                        <a
+                            class="filter-pill {% if option.is_active %}is-active{% endif %}"
+                            href="{{ option.url }}"
+                        >
+                            {{ option.label }}
+                        </a>
                     {% endfor %}
-                </select>
+                </div>
             </div>
-
-            <div class="filter-actions">
-                <button class="button-primary" type="submit">Apply filters</button>
-            </div>
-        </form>
+        </div>
     </section>
 {% endif %}
 

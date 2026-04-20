@@ -252,6 +252,75 @@ def profile_detail_view(request, profile_id: int):
         },
     ]
 
+    def build_filter_url(
+            *,
+            priority: str | None = None,
+            status: str | None = None,
+            category: str | None = None,
+    ) -> str:
+        query_params = {}
+
+        next_priority = selected_priority if priority is None else priority
+        next_status = selected_status if status is None else status
+        next_category = selected_category if category is None else category
+
+        if next_priority:
+            query_params["priority"] = next_priority
+
+        if next_status:
+            query_params["status"] = next_status
+
+        if next_category:
+            query_params["category"] = next_category
+
+        query_string = urlencode(query_params)
+        base_url = reverse(
+            "profile_detail",
+            kwargs={"profile_id": profile.id},
+        )
+
+        if not query_string:
+            return base_url
+
+        return f"{base_url}?{query_string}"
+
+    priority_filter_options = [
+        {
+            "label": "All priorities",
+            "value": "",
+            "url": build_filter_url(priority=""),
+            "is_active": selected_priority == "",
+        },
+        *[
+            {
+                "label": label,
+                "value": value,
+                "url": build_filter_url(priority=value),
+                "is_active": selected_priority == value,
+            }
+            for value, label in Event.Priority.choices
+        ],
+    ]
+
+    status_filter_options = [
+        {
+            "label": "All statuses",
+            "value": "",
+            "url": build_filter_url(status=""),
+            "is_active": selected_status == "",
+        },
+        *[
+            {
+                "label": label,
+                "value": value,
+                "url": build_filter_url(status=value),
+                "is_active": selected_status == value,
+            }
+            for value, label in Event.Status.choices
+            if value != Event.Status.ARCHIVED
+        ],
+    ]
+
     archived_events = Event.objects.filter(
         profile=profile,
         status=Event.Status.ARCHIVED,
@@ -338,6 +407,8 @@ def profile_detail_view(request, profile_id: int):
             "priority_choices": Event.Priority.choices,
             "status_choices": Event.Status.choices,
             "category_choices": Event.Category.choices,
+            "priority_filter_options": priority_filter_options,
+            "status_filter_options": status_filter_options,
         },
     )
 
