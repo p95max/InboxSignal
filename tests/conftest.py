@@ -4,6 +4,14 @@ from apps.accounts.models import User
 from apps.monitoring.models import MonitoringProfile
 
 
+@pytest.fixture(autouse=True)
+def allow_testserver(settings):
+    """Allow Django test client host."""
+
+    if "testserver" not in settings.ALLOWED_HOSTS:
+        settings.ALLOWED_HOSTS.append("testserver")
+
+
 @pytest.fixture
 def user(db):
     return User.objects.create_user(
