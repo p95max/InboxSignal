@@ -1,47 +1,115 @@
+/* =========================
+   Messaging Monitoring UI
+   Dark modern Bootstrap-friendly theme
+   ========================= */
 
 :root {
-    --bg: #f6f7fb;
-    --card: #ffffff;
-    --text: #172033;
-    --muted: #697386;
-    --border: #dfe3eb;
-    --primary: #2557d6;
-    --danger: #c62828;
-    --warning: #9a6700;
-    --success: #1b7f3a;
+    --bg: #0b1020;
+    --bg-soft: #11182b;
+    --card: #151d31;
+    --card-hover: #19233a;
+    --text: #e8edf7;
+    --text-strong: #ffffff;
+    --muted: #93a4bd;
+    --muted-soft: #65748b;
+    --border: rgba(148, 163, 184, 0.18);
+
+    --primary: #4f8cff;
+    --primary-hover: #6ea2ff;
+    --primary-soft: rgba(79, 140, 255, 0.14);
+
+    --danger: #ff5c7a;
+    --danger-soft: rgba(255, 92, 122, 0.14);
+
+    --warning: #f6c453;
+    --warning-soft: rgba(246, 196, 83, 0.14);
+
+    --success: #3ddc97;
+    --success-soft: rgba(61, 220, 151, 0.14);
+
+    --info: #38bdf8;
+    --info-soft: rgba(56, 189, 248, 0.14);
+
+    --shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+    --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.22);
+
+    --radius-lg: 22px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
 }
+
+/* =========================
+   Base
+   ========================= */
 
 * {
     box-sizing: border-box;
 }
 
-body {
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+html {
+    min-height: 100%;
     background: var(--bg);
+}
+
+body {
+    min-height: 100vh;
+    margin: 0;
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    background:
+        radial-gradient(circle at top left, rgba(79, 140, 255, 0.16), transparent 34rem),
+        radial-gradient(circle at top right, rgba(61, 220, 151, 0.10), transparent 30rem),
+        linear-gradient(180deg, #0b1020 0%, #0d1324 45%, #090d18 100%);
     color: var(--text);
 }
 
 a {
     color: var(--primary);
     text-decoration: none;
+    transition: color 0.15s ease, opacity 0.15s ease;
 }
+
+a:hover {
+    color: var(--primary-hover);
+}
+
+strong {
+    color: var(--text-strong);
+}
+
+/* =========================
+   Layout
+   ========================= */
 
 .layout {
-    max-width: 1120px;
+    max-width: 1180px;
     margin: 0 auto;
-    padding: 24px;
+    padding: 28px 24px 48px;
 }
 
+/* =========================
+   Topbar
+   ========================= */
+
 .topbar {
-    background: var(--card);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(11, 16, 32, 0.78);
     border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(18px);
 }
 
 .topbar-inner {
-    max-width: 1120px;
+    max-width: 1180px;
     margin: 0 auto;
-    padding: 14px 24px;
+    padding: 16px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -49,8 +117,25 @@ a {
 }
 
 .brand {
-    font-weight: 700;
-    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-strong);
+}
+
+.brand::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--primary), var(--success));
+    box-shadow: 0 0 24px rgba(79, 140, 255, 0.75);
+}
+
+.brand:hover {
+    color: var(--text-strong);
 }
 
 .nav-actions {
@@ -65,55 +150,136 @@ a {
     margin: 0;
 }
 
+/* =========================
+   Buttons
+   Supports current .button and Bootstrap .btn
+   ========================= */
+
 .button,
-button {
+button,
+.btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
+    min-height: 38px;
     border: 1px solid var(--border);
-    background: var(--card);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text);
-    padding: 8px 12px;
-    border-radius: 10px;
+    padding: 8px 13px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font: inherit;
     font-size: 14px;
+    font-weight: 650;
+    line-height: 1.2;
+    transition:
+        transform 0.12s ease,
+        border-color 0.15s ease,
+        background 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
-.button-primary {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: white;
+.button:hover,
+button:hover,
+.btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-strong);
 }
 
-.button-danger {
-    border-color: #f2c6c6;
-    color: var(--danger);
+.button:active,
+button:active,
+.btn:active {
+    transform: translateY(0);
 }
 
-.button-warning {
-    border-color: #efd48d;
-    color: var(--warning);
+.button-primary,
+.btn-primary {
+    border-color: rgba(79, 140, 255, 0.8);
+    background: linear-gradient(135deg, #386dff, #5e9bff);
+    color: #fff;
+    box-shadow: 0 10px 28px rgba(79, 140, 255, 0.28);
 }
 
-.button-success {
-    border-color: #b8dfc3;
-    color: var(--success);
+.button-primary:hover,
+.btn-primary:hover {
+    border-color: var(--primary-hover);
+    background: linear-gradient(135deg, #457aff, #73a8ff);
+    color: #fff;
 }
+
+.button-danger,
+.btn-danger {
+    border-color: rgba(255, 92, 122, 0.45);
+    background: var(--danger-soft);
+    color: #ff8ca1;
+}
+
+.button-danger:hover,
+.btn-danger:hover {
+    border-color: rgba(255, 92, 122, 0.75);
+    background: rgba(255, 92, 122, 0.20);
+    color: #ffd5dd;
+}
+
+.button-warning,
+.btn-warning {
+    border-color: rgba(246, 196, 83, 0.45);
+    background: var(--warning-soft);
+    color: #ffd978;
+}
+
+.button-warning:hover,
+.btn-warning:hover {
+    border-color: rgba(246, 196, 83, 0.75);
+    background: rgba(246, 196, 83, 0.20);
+    color: #ffe8a3;
+}
+
+.button-success,
+.btn-success {
+    border-color: rgba(61, 220, 151, 0.45);
+    background: var(--success-soft);
+    color: #6ef0b7;
+}
+
+.button-success:hover,
+.btn-success:hover {
+    border-color: rgba(61, 220, 151, 0.75);
+    background: rgba(61, 220, 151, 0.20);
+    color: #b4ffd9;
+}
+
+/* =========================
+   Page header
+   ========================= */
 
 .page-header {
-    margin-bottom: 24px;
+    margin-bottom: 26px;
 }
 
 .page-header h1 {
     margin: 0 0 8px;
-    font-size: 30px;
+    font-size: clamp(28px, 4vw, 42px);
+    line-height: 1.05;
+    font-weight: 850;
+    letter-spacing: -0.045em;
+    color: var(--text-strong);
 }
 
 .page-header p {
+    max-width: 780px;
     margin: 0;
     color: var(--muted);
+    font-size: 15px;
 }
+
+/* =========================
+   Grid
+   ========================= */
 
 .grid {
     display: grid;
@@ -128,18 +294,33 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* =========================
+   Cards
+   Overrides Bootstrap .card
+   ========================= */
+
 .card {
-    background: var(--card);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.025)),
+        var(--card);
     border: 1px solid var(--border);
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
     padding: 18px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    color: var(--text);
+    box-shadow: var(--shadow-soft);
+}
+
+.card:hover {
+    border-color: rgba(148, 163, 184, 0.26);
 }
 
 .stat-value {
-    font-size: 30px;
-    font-weight: 800;
-    margin-bottom: 4px;
+    font-size: 34px;
+    line-height: 1;
+    font-weight: 850;
+    letter-spacing: -0.04em;
+    margin-bottom: 8px;
+    color: var(--text-strong);
 }
 
 .stat-label,
@@ -148,19 +329,31 @@ button {
     font-size: 14px;
 }
 
+/* =========================
+   Sections
+   ========================= */
+
 .section {
-    margin-top: 28px;
+    margin-top: 30px;
 }
 
 .section-title {
-    font-size: 20px;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
     margin: 0 0 14px;
+    color: var(--text-strong);
 }
+
+/* =========================
+   Profile cards
+   ========================= */
 
 .profile-card {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    min-height: 190px;
 }
 
 .profile-card-header {
@@ -170,10 +363,20 @@ button {
 }
 
 .profile-name {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text);
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-strong);
 }
+
+.profile-name:hover {
+    color: var(--primary-hover);
+}
+
+/* =========================
+   Badges
+   Overrides Bootstrap .badge
+   ========================= */
 
 .badge-row {
     display: flex;
@@ -185,28 +388,51 @@ button {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 8px;
+    width: fit-content;
+    padding: 6px 9px;
+    border: 1px solid rgba(79, 140, 255, 0.25);
     border-radius: 999px;
-    background: #eef2ff;
-    color: #293b8f;
-    font-size: 13px;
-    font-weight: 600;
+    background: var(--primary-soft);
+    color: #aac7ff;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1;
+    letter-spacing: 0.01em;
 }
 
 .badge-danger {
-    background: #fdeaea;
-    color: var(--danger);
+    border-color: rgba(255, 92, 122, 0.28);
+    background: var(--danger-soft);
+    color: #ff9caf;
 }
 
 .badge-warning {
-    background: #fff3cd;
-    color: var(--warning);
+    border-color: rgba(246, 196, 83, 0.30);
+    background: var(--warning-soft);
+    color: #ffdc86;
+}
+
+.badge-success {
+    border-color: rgba(61, 220, 151, 0.30);
+    background: var(--success-soft);
+    color: #88f3c2;
+}
+
+.badge-info {
+    border-color: rgba(56, 189, 248, 0.30);
+    background: var(--info-soft);
+    color: #9bddff;
 }
 
 .badge-muted {
-    background: #f1f3f7;
+    border-color: rgba(148, 163, 184, 0.20);
+    background: rgba(148, 163, 184, 0.10);
     color: var(--muted);
 }
+
+/* =========================
+   Forms / filters
+   ========================= */
 
 .filters {
     display: flex;
@@ -218,23 +444,66 @@ button {
 .field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 7px;
 }
 
 .field label {
     font-size: 13px;
+    font-weight: 700;
     color: var(--muted);
 }
 
 select,
-input {
+input,
+textarea,
+.form-control,
+.form-select {
     min-width: 160px;
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    padding: 9px 11px;
     font: inherit;
-    background: white;
+    background-color: rgba(255, 255, 255, 0.045);
+    color: var(--text);
+    outline: none;
+    transition:
+        border-color 0.15s ease,
+        background 0.15s ease,
+        box-shadow 0.15s ease;
 }
+
+select:hover,
+input:hover,
+textarea:hover,
+.form-control:hover,
+.form-select:hover {
+    border-color: rgba(148, 163, 184, 0.34);
+}
+
+select:focus,
+input:focus,
+textarea:focus,
+.form-control:focus,
+.form-select:focus {
+    border-color: rgba(79, 140, 255, 0.75);
+    background-color: rgba(255, 255, 255, 0.07);
+    color: var(--text);
+    box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.14);
+}
+
+select option {
+    background: #11182b;
+    color: var(--text);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--muted-soft);
+}
+
+/* =========================
+   Events
+   ========================= */
 
 .event-list {
     display: flex;
@@ -243,9 +512,20 @@ input {
 }
 
 .event-card {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 13px;
+    overflow: hidden;
+}
+
+.event-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--primary), transparent);
+    opacity: 0.75;
 }
 
 .event-header {
@@ -255,16 +535,19 @@ input {
 }
 
 .event-title {
-    font-size: 18px;
-    font-weight: 700;
+    font-size: 19px;
+    font-weight: 850;
+    letter-spacing: -0.025em;
+    color: var(--text-strong);
 }
 
 .event-message {
-    padding: 12px;
-    background: #f8fafc;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    padding: 14px;
+    background: rgba(8, 13, 27, 0.74);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: var(--radius-md);
     white-space: pre-wrap;
+    color: #dbe6f7;
 }
 
 .event-actions {
@@ -273,13 +556,136 @@ input {
     gap: 8px;
 }
 
+/* Status accents */
+
+.event-card:has(.badge-danger)::before {
+    background: linear-gradient(180deg, var(--danger), transparent);
+}
+
+.event-card:has(.badge-warning)::before {
+    background: linear-gradient(180deg, var(--warning), transparent);
+}
+
+/* =========================
+   Empty state
+   ========================= */
+
 .empty-state {
-    padding: 32px;
+    padding: 36px;
     text-align: center;
+    color: var(--muted);
+    border-style: dashed;
+}
+
+/* =========================
+   Login page improvements
+   ========================= */
+
+form {
+    color: var(--text);
+}
+
+label {
     color: var(--muted);
 }
 
+.helptext {
+    color: var(--muted-soft);
+    font-size: 13px;
+}
+
+.errorlist {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    list-style: none;
+    border: 1px solid rgba(255, 92, 122, 0.28);
+    border-radius: var(--radius-md);
+    background: var(--danger-soft);
+    color: #ff9caf;
+}
+
+/* =========================
+   Bootstrap helpers override
+   ========================= */
+
+.bg-light,
+.bg-white {
+    background-color: var(--card) !important;
+}
+
+.text-muted {
+    color: var(--muted) !important;
+}
+
+.border {
+    border-color: var(--border) !important;
+}
+
+.dropdown-menu {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow);
+}
+
+.dropdown-item {
+    color: var(--text);
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-strong);
+}
+
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--text);
+    --bs-table-border-color: var(--border);
+    color: var(--text);
+}
+
+.alert {
+    border-radius: var(--radius-md);
+    border-color: var(--border);
+}
+
+/* =========================
+   Scrollbar
+   ========================= */
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0b1020;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #26344f;
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #344765;
+}
+
+/* =========================
+   Responsive
+   ========================= */
+
+@media (max-width: 900px) {
+    .grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 780px) {
+    .layout {
+        padding: 22px 16px 40px;
+    }
+
     .grid-4,
     .grid-2 {
         grid-template-columns: 1fr;
@@ -290,5 +696,52 @@ input {
     .topbar-inner {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .nav-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .filters {
+        align-items: stretch;
+    }
+
+    .field,
+    select,
+    input,
+    textarea,
+    .form-control,
+    .form-select {
+        width: 100%;
+    }
+
+    .button,
+    button,
+    .btn {
+        width: 100%;
+    }
+
+    .event-actions form {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .topbar-inner {
+        padding: 14px 16px;
+    }
+
+    .page-header h1 {
+        font-size: 30px;
+    }
+
+    .card {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .stat-value {
+        font-size: 30px;
     }
 }
