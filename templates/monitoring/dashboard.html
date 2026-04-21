@@ -97,7 +97,9 @@
                 Archived events
                 <span class="button-counter">{{ profile.archived_events_count }}</span>
             </a>
-
+            <a class="button" href="{% url 'monitoring:profile_update' profile.id %}">
+                Edit
+            </a>
             <form
                 method="post"
                 action="{% url 'profile_delete' profile.id %}"

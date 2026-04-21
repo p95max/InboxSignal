@@ -9,7 +9,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 
 from apps.integrations.models import ConnectedSource
-from apps.monitoring.forms import MonitoringProfileCreateForm
+from apps.monitoring.forms import MonitoringProfileCreateForm, MonitoringProfileUpdateForm
 
 from apps.monitoring.models import Event, MonitoringProfile
 
@@ -496,6 +496,48 @@ def profile_delete_view(request, profile_id: int):
     )
 
     return redirect("dashboard")
+
+@login_required
+def profile_update_view(request, profile_id: int):
+    """Update a monitoring profile owned by the current user."""
+
+    profile = (
+        MonitoringProfile.objects.filter(
+            id=profile_id,
+            owner=request.user,
+        )
+        .first()
+    )
+
+    if profile is None:
+        raise Http404("Monitoring profile was not found.")
+
+    if request.method == "POST":
+        form = MonitoringProfileUpdateForm(
+            request.POST,
+            instance=profile,
+        )
+
+        if form.is_valid():
+            form.save()
+
+            messages.success(
+                request,
+                f'Monitoring profile "{profile.name}" was updated.',
+            )
+
+            return redirect("profile_detail", profile_id=profile.id)
+    else:
+        form = MonitoringProfileUpdateForm(instance=profile)
+
+    return render(
+        request,
+        "monitoring/profile_update.html",
+        {
+            "profile": profile,
+            "form": form,
+        },
+    )
 
 
 @login_required

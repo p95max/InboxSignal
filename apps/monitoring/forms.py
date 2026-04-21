@@ -136,6 +136,38 @@ class MonitoringProfileCreateForm(forms.ModelForm):
         return profile
 
 
+
+class MonitoringProfileUpdateForm(forms.ModelForm):
+    """Update editable monitoring profile settings."""
+
+    class Meta:
+        model = MonitoringProfile
+        fields = [
+            "name",
+            "scenario",
+            "status",
+            "business_context",
+        ]
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Example: Car sales monitoring",
+                }
+            ),
+            "scenario": forms.Select(attrs={"class": "form-control"}),
+            "status": forms.Select(attrs={"class": "form-control"}),
+            "business_context": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Short business context for better analysis.",
+                }
+            ),
+        }
+
+
+
 def extract_bot_id_from_token(token: str) -> str:
     """Extract Telegram bot id from token prefix."""
 

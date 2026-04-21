@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Edit profile | Messaging Monitoring{% endblock %}
+
+{% block content %}
+<div class="page-header page-header-with-actions">
+    <div>
+        <h1>Edit monitoring profile</h1>
+        <p>Update profile settings without changing connected Telegram sources.</p>
+    </div>
+
+    <a class="button" href="{% url 'profile_detail' profile.id %}">
+        Back to profile
+    </a>
+</div>
+
+<section class="card">
+    <form method="post" class="profile-create-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="errorlist">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="form-grid">
+            {% for field in form %}
+                <div class="{% if field.name == 'business_context' %}form-grid-full{% endif %}">
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+
+                    {{ field }}
+
+                    {% if field.help_text %}
+                        <div class="helptext">{{ field.help_text }}</div>
+                    {% endif %}
+
+                    {% for error in field.errors %}
+                        <div class="form-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <a class="button" href="{% url 'profile_detail' profile.id %}">
+                Cancel
+            </a>
+
+            <button class="button button-primary" type="submit">
+                Save changes
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}

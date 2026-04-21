@@ -1,7 +1,6 @@
 from django.urls import path
 
-from apps.monitoring import api
-
+from apps.monitoring import api, views
 
 app_name = "monitoring"
 
@@ -35,5 +34,10 @@ urlpatterns = [
         "events/<uuid:event_id>/escalate/",
         api.event_escalate_api,
         name="event_escalate_api",
+    ),
+    path(
+        "profiles/<int:profile_id>/edit/",
+        views.profile_update_view,
+        name="profile_update",
     ),
 ]
