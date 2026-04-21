@@ -1,0 +1,49 @@
+<header class="topbar">
+    <div class="topbar-inner">
+        <a class="brand brand-modern" href="{% url 'home' %}" aria-label="Messaging Monitoring home">
+            <span class="brand-mark">MM</span>
+            <span class="brand-text">
+                <span class="brand-title">Messaging Monitoring</span>
+                <span class="brand-subtitle">AI Telegram alerts</span>
+            </span>
+        </a>
+
+        <nav class="nav-actions nav-actions-modern" aria-label="Main navigation">
+            {% if request.user.is_authenticated %}
+                <a class="nav-link-modern" href="{% url 'home' %}">
+                    Home
+                </a>
+
+                <a class="button button-primary nav-dashboard-button" href="{% url 'dashboard' %}">
+                    Dashboard
+                </a>
+
+                <div class="user-chip" title="{{ request.user.email }}">
+                    <span class="user-avatar">
+                        {{ request.user.email|first|upper }}
+                    </span>
+                    <span class="user-email">{{ request.user.email }}</span>
+                </div>
+
+                <form class="logout-form" method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="button button-ghost" type="submit">
+                        Logout
+                    </button>
+                </form>
+            {% else %}
+                <a class="nav-link-modern" href="#how-it-works">
+                    How it works
+                </a>
+
+                <a class="nav-link-modern" href="{% url 'login' %}">
+                    Login
+                </a>
+
+                <a class="button button-primary nav-dashboard-button" href="{% url 'login' %}">
+                    Get started
+                </a>
+            {% endif %}
+        </nav>
+    </div>
+</header>

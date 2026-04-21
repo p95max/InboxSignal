@@ -19,30 +19,12 @@
 
 </head>
 <body>
-<header class="topbar">
-    <div class="topbar-inner">
-        <a class="brand" href="{% url 'home' %}">
-            Messaging Monitoring
-        </a>
 
-        <div class="nav-actions">
-            {% if request.user.is_authenticated %}
-                <a class="button" href="{% url 'dashboard' %}">Dashboard</a>
-                <span>{{ request.user.email }}</span>
-                <form class="logout-form" method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button type="submit">Logout</button>
-                </form>
-            {% else %}
-                <a class="button" href="{% url 'login' %}">Login</a>
-                <a class="button button-primary" href="{% url 'login' %}">Get started</a>
-            {% endif %}
-        </div>
-    </div>
-</header>
+{% include "includes/_navbar.html" %}
 
 <main class="layout">
     {% block content %}{% endblock %}
 </main>
+
 </body>
 </html>

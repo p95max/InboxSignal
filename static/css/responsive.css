@@ -6,6 +6,15 @@
     .category-stats {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    .grid-5 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .landing-hero {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
 }
 
 @media (max-width: 900px) {
@@ -19,8 +28,10 @@
         padding: 22px 16px 40px;
     }
 
+    .grid-2,
+    .grid-3,
     .grid-4,
-    .grid-2 {
+    .grid-5 {
         grid-template-columns: 1fr;
     }
 
@@ -29,8 +40,15 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .topbar-inner,
+    .topbar-inner {
+        min-height: auto;
+        padding: 12px 16px;
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
     .page-header-row,
+    .page-header-with-actions,
     .event-header,
     .profile-card-header,
     .panel-header {
@@ -41,6 +59,17 @@
     .nav-actions {
         width: 100%;
         justify-content: space-between;
+    }
+
+    .nav-actions-modern {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .nav-actions-modern .button,
+    .nav-actions-modern .logout-form {
+        width: auto;
     }
 
     .page-actions,
@@ -59,7 +88,7 @@
 
     .field,
     select,
-    input,
+    input:not([type="checkbox"]):not([type="radio"]),
     textarea,
     .form-control,
     .form-select {
@@ -78,11 +107,79 @@
     .event-actions form {
         width: 100%;
     }
+
+    .filter-button-groups,
+    .form-grid,
+    .checkbox-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-pill {
+        flex: 1;
+    }
+
+    .inline-form,
+    .inline-form .button {
+        width: 100%;
+    }
+
+    .landing-actions,
+    .landing-final-cta {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .landing-actions .button,
+    .landing-final-cta .button {
+        width: 100%;
+    }
+
+    .landing-hero h1 {
+        font-size: 42px;
+    }
+
+    .landing-lead {
+        font-size: 16px;
+    }
+
+    .user-chip {
+        max-width: 100%;
+    }
+
+    .user-email {
+        max-width: 220px;
+    }
 }
 
 @media (max-width: 480px) {
     .topbar-inner {
         padding: 14px 16px;
+    }
+
+    .brand-subtitle {
+        display: none;
+    }
+
+    .nav-actions-modern {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .nav-actions-modern .button,
+    .nav-actions-modern .nav-link-modern,
+    .nav-actions-modern .logout-form,
+    .nav-actions-modern .logout-form .button {
+        width: 100%;
+    }
+
+    .user-chip {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .user-email {
+        max-width: none;
     }
 
     .page-header h1 {
@@ -105,85 +202,3 @@
         grid-template-columns: 1fr;
     }
 }
-
-
-@media (max-width: 780px) {
-    .filter-button-groups {
-        grid-template-columns: 1fr;
-    }
-
-    .filter-pill {
-        flex: 1;
-    }
-}
-
-
-@media (max-width: 760px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-
-@media (max-width: 760px) {
-    .page-header-with-actions,
-    .profile-card-header,
-    .profile-card-actions {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .profile-card-actions {
-        display: grid;
-        grid-template-columns: 1fr;
-    }
-
-    .inline-form,
-    .inline-form .button {
-        width: 100%;
-    }
-}
-
-
-@media (max-width: 760px) {
-    .checkbox-grid {
-        grid-template-columns: 1fr;
-    }
-}
-@media (max-width: 1100px) {
-    .grid-5 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .landing-hero {
-        grid-template-columns: 1fr;
-        min-height: auto;
-    }
-}
-
-@media (max-width: 780px) {
-    .grid-3,
-    .grid-5 {
-        grid-template-columns: 1fr;
-    }
-
-    .landing-actions,
-    .landing-final-cta {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .landing-actions .button,
-    .landing-final-cta .button {
-        width: 100%;
-    }
-
-    .landing-hero h1 {
-        font-size: 42px;
-    }
-
-    .landing-lead {
-        font-size: 16px;
-    }
-}
-
