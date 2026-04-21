@@ -2,11 +2,14 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone as dt_timezone
 from typing import Any
+
 from apps.integrations.services.customer_rate_limits import (
     check_telegram_customer_message_limits,
     send_telegram_customer_rate_limit_notice,
 )
-
+from apps.integrations.services.customer_auto_replies import (
+    maybe_send_telegram_customer_auto_reply,
+)
 from apps.alerts.services.telegram_delivery import telegram_send_message
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.models import IncomingMessage
@@ -160,6 +163,12 @@ def handle_telegram_webhook_update(
                         "error": str(exc)[:1000],
                     },
                 )
+
+    if result.created and not is_start_command:
+        maybe_send_telegram_customer_auto_reply(
+            source=source,
+            message=result.message,
+        )
 
     logger.info(
         "telegram_webhook_update_ingested",
