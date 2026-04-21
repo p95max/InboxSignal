@@ -30,7 +30,7 @@ class MonitoringProfileCreateForm(forms.ModelForm):
         help_text="Token from @BotFather. It will be encrypted before saving.",
     )
     alert_chat_id = forms.CharField(
-        label="Alert chat ID",
+        label="Alert destination chat ID",
         required=False,
         max_length=255,
         help_text=(
@@ -142,7 +142,7 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
 
     alert_chat_id = forms.CharField(
         required=False,
-        label="Alert chat ID",
+        label="Alert destination chat ID",
         help_text="Optional. Change Telegram chat ID for alerts.",
         widget=forms.TextInput(
             attrs={
