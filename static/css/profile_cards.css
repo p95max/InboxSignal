@@ -98,3 +98,24 @@
     display: inline-flex;
     margin: 0;
 }
+
+.profile-card-disabled {
+    opacity: 0.58;
+    filter: grayscale(0.35);
+    border-color: rgba(148, 163, 184, 0.16);
+    background: rgba(15, 23, 42, 0.42);
+}
+
+.profile-card-disabled .profile-name {
+    color: var(--muted);
+}
+
+.profile-card-disabled .button-primary {
+    background: rgba(148, 163, 184, 0.16);
+    border-color: rgba(148, 163, 184, 0.24);
+    color: var(--muted);
+}
+
+.profile-card-disabled:hover {
+    opacity: 0.72;
+}

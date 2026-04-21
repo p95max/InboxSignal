@@ -34,8 +34,8 @@ class MonitoringProfileCreateForm(forms.ModelForm):
         required=False,
         max_length=255,
         help_text=(
-            "Optional.  Telegram chat ID for alerts.\n"
-            "After profile creation send `/start` to your bot to enable Alerts. "
+            "Optional. Enter Telegram chat ID for alerts or\n"
+            "after profile creation, in Telegram app send `/start` to your bot to enable Alerts. "
         ),
     )
 
@@ -176,6 +176,11 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
             "scenario",
             "status",
             "business_context",
+            "track_leads",
+            "track_complaints",
+            "track_requests",
+            "track_urgent",
+            "track_general_activity",
             "ai_daily_call_limit",
         ]
         widgets = {
@@ -187,6 +192,11 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
             ),
             "scenario": forms.Select(attrs={"class": "form-control"}),
             "status": forms.Select(attrs={"class": "form-control"}),
+            "track_leads": forms.CheckboxInput(),
+            "track_complaints": forms.CheckboxInput(),
+            "track_requests": forms.CheckboxInput(),
+            "track_urgent": forms.CheckboxInput(),
+            "track_general_activity": forms.CheckboxInput(),
             "business_context": forms.Textarea(
                 attrs={
                     "class": "form-control",

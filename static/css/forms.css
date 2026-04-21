@@ -16,22 +16,22 @@
 }
 
 .field label {
-    color: var(--muted);
+    color: #cbd5e1;
     font-size: 13px;
     font-weight: 700;
 }
 
 select,
-input,
+input:not([type="checkbox"]):not([type="radio"]),
 textarea,
 .form-control,
 .form-select {
     min-width: 160px;
     padding: 9px 11px;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(148, 163, 184, 0.28);
     border-radius: var(--radius-sm);
-    background-color: rgba(255, 255, 255, 0.045);
-    color: var(--text);
+    background: rgba(15, 23, 42, 0.72);
+    color: #e5e7eb;
     outline: none;
     font: inherit;
     transition:
@@ -41,37 +41,44 @@ textarea,
 }
 
 select:hover,
-input:hover,
+input:not([type="checkbox"]):not([type="radio"]):hover,
 textarea:hover,
 .form-control:hover,
 .form-select:hover {
-    border-color: rgba(148, 163, 184, 0.34);
+    border-color: rgba(148, 163, 184, 0.48);
+    background: rgba(15, 23, 42, 0.82);
 }
 
 select:focus,
-input:focus,
+input:not([type="checkbox"]):not([type="radio"]):focus,
 textarea:focus,
 .form-control:focus,
 .form-select:focus {
-    border-color: rgba(79, 140, 255, 0.75);
-    background-color: rgba(255, 255, 255, 0.07);
-    color: var(--text);
-    box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.14);
+    color: #f8fafc;
+    border-color: rgba(79, 140, 255, 0.85);
+    background: rgba(15, 23, 42, 0.92);
+    box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.18);
 }
 
 select option {
-    background: #11182b;
-    color: var(--text);
+    color: #e5e7eb;
+    background: #111827;
 }
 
-input::placeholder,
-textarea::placeholder {
-    color: var(--muted-soft);
+input:not([type="checkbox"]):not([type="radio"])::placeholder,
+textarea::placeholder,
+.form-control::placeholder {
+    color: #94a3b8;
+    opacity: 1;
 }
 
-.helptext {
-    color: var(--muted-soft);
+.helptext,
+.form-help,
+.form-text,
+.form-field-help {
+    color: #9ca3af;
     font-size: 13px;
+    line-height: 1.45;
 }
 
 .errorlist {
@@ -82,6 +89,14 @@ textarea::placeholder {
     border-radius: var(--radius-md);
     background: var(--danger-soft);
     color: #ff9caf;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill,
+input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:hover,
+input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:focus {
+    -webkit-text-fill-color: #e5e7eb;
+    box-shadow: 0 0 0 1000px #111827 inset;
+    caret-color: #e5e7eb;
 }
 
 
@@ -163,7 +178,7 @@ textarea::placeholder {
 
 
 /* =========================
-   Profile create form
+   Profile forms
    ========================= */
 
 .profile-create-form {
@@ -184,18 +199,6 @@ textarea::placeholder {
 .form-control {
     width: 100%;
     margin-top: 6px;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text);
-    font: inherit;
-}
-
-.form-control:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
 .form-error {
@@ -208,6 +211,16 @@ textarea::placeholder {
     display: flex;
     justify-content: flex-end;
 }
+
+.form-section-label {
+    margin-bottom: 10px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
 
 /* =========================
    Checkbox controls
@@ -233,7 +246,11 @@ textarea::placeholder {
     user-select: none;
 }
 
-.checkbox-row input[type="checkbox"] {
+input[type="checkbox"],
+input[type="radio"],
+.checkbox-row input[type="checkbox"],
+.checkbox-row input[type="radio"],
+.form-check-input {
     width: 16px;
     min-width: 16px;
     height: 16px;
@@ -264,75 +281,9 @@ textarea::placeholder {
     background: var(--primary-soft);
 }
 
-/* =========================
-   Form readability overrides
-   ========================= */
-
-select,
-input,
-textarea,
-.form-control,
-.form-select {
-    color: #e5e7eb;
-    background: rgba(15, 23, 42, 0.72);
-    border-color: rgba(148, 163, 184, 0.28);
+@media (max-width: 720px) {
+    .form-grid,
+    .checkbox-grid {
+        grid-template-columns: 1fr;
+    }
 }
-
-select:hover,
-input:hover,
-textarea:hover,
-.form-control:hover,
-.form-select:hover {
-    border-color: rgba(148, 163, 184, 0.48);
-    background: rgba(15, 23, 42, 0.82);
-}
-
-select:focus,
-input:focus,
-textarea:focus,
-.form-control:focus,
-.form-select:focus {
-    color: #f8fafc;
-    background: rgba(15, 23, 42, 0.92);
-    border-color: rgba(79, 140, 255, 0.85);
-    box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.18);
-}
-
-input::placeholder,
-textarea::placeholder,
-.form-control::placeholder {
-    color: #94a3b8;
-    opacity: 1;
-}
-
-select option {
-    color: #e5e7eb;
-    background: #111827;
-}
-
-.field label {
-    color: #cbd5e1;
-}
-
-.helptext,
-.form-help,
-.form-text,
-.form-field-help {
-    color: #9ca3af;
-    font-size: 13px;
-    line-height: 1.45;
-}
-
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus {
-    -webkit-text-fill-color: #e5e7eb;
-    box-shadow: 0 0 0 1000px #111827 inset;
-    caret-color: #e5e7eb;
-}
-
-.form-control {
-    width: 100%;
-    margin-top: 6px;
-}
-

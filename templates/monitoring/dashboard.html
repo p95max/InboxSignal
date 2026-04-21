@@ -54,123 +54,124 @@
 </section>
 
 <section class="section">
-    <h2 class="section-title">Monitoring profiles</h2>
+    <div class="section-title-row">
+    <h2 class="section-title">Monitoring profiles ({{ profiles_count }})</h2>
 
     {% if profiles %}
         <div class="grid grid-2">
 
-{% for profile in profiles %}
-    <article class="card profile-card">
-        <div class="profile-card-main">
-            <div class="profile-card-header">
-                <div class="profile-card-title">
-                    <a class="profile-name" href="{% url 'profile_detail' profile.id %}">
-                        {{ profile.name }}
-                    </a>
+    {% for profile in profiles %}
+        <article class="card profile-card {% if profile.status != 'active' %}profile-card-disabled{% endif %}">
+            <div class="profile-card-main">
+                <div class="profile-card-header">
+                    <div class="profile-card-title">
+                        <a class="profile-name" href="{% url 'profile_detail' profile.id %}">
+                            {{ profile.name }}
+                        </a>
 
-                    <div class="profile-status-row">
-                        <span class="badge {% if profile.status == 'active' %}badge-success{% else %}badge-muted{% endif %}">
-                            Profile status: {{ profile.get_status_display }}
-                        </span>
+                        <div class="profile-status-row">
+                            <span class="badge {% if profile.status == 'active' %}badge-success{% else %}badge-muted{% endif %}">
+                                Profile status: {{ profile.get_status_display }}
+                            </span>
 
-                        {% if profile.telegram_bot_sources %}
-                            {% for source in profile.telegram_bot_sources %}
-                                <span class="badge {% if source.status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
-                                    Adapter: Telegram bot
-                                </span>
-
-                                {% if source.external_username %}
-                                    <span class="badge badge-muted">
-                                        @{{ source.external_username }}
+                            {% if profile.telegram_bot_sources %}
+                                {% for source in profile.telegram_bot_sources %}
+                                    <span class="badge {% if source.status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
+                                        Adapter: Telegram bot
                                     </span>
-                                {% endif %}
-                            {% endfor %}
-                        {% else %}
+
+                                    {% if source.external_username %}
+                                        <span class="badge badge-muted">
+                                            @{{ source.external_username }}
+                                        </span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="badge badge-muted">
+                                    Adapter: Telegram bot not connected
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-card-section">
+                    <div class="profile-card-section-label">Events</div>
+
+                    <div class="badge-row profile-badge-row">
+                        <span class="badge badge-danger">Urgent open: {{ profile.urgent_open_events_count }}</span>
+                        <span class="badge badge-warning">Important open: {{ profile.important_open_events_count }}</span>
+                        <span class="badge">Open: {{ profile.open_events_count }}</span>
+                        <span class="badge badge-muted">Archived: {{ profile.archived_events_count }}</span>
+                        <span class="badge badge-muted">Total: {{ profile.events_total }}</span>
+                    </div>
+                </div>
+
+                <div class="profile-card-section">
+                    <div class="profile-card-section-label">AI usage</div>
+
+                    <div class="badge-row profile-badge-row">
+                        {% if profile.ai_daily_usage.is_unlimited %}
+                            <span class="badge badge-ai">
+                                AI today: {{ profile.ai_daily_usage.current_calls }}
+                            </span>
+                            <span class="badge badge-success">
+                                No profile AI limit
+                            </span>
                             <span class="badge badge-muted">
-                                Adapter: Telegram bot not connected
+                                Uses account quota
+                            </span>
+                        {% else %}
+                            <span class="badge badge-ai">
+                                AI today: {{ profile.ai_daily_usage.current_calls }} / {{ profile.ai_daily_usage.limit }}
+                            </span>
+                            <span class="badge badge-muted">
+                                Profile AI limit: {{ profile.ai_daily_usage.limit }}/day
                             </span>
                         {% endif %}
                     </div>
                 </div>
-            </div>
 
-            <div class="profile-card-section">
-                <div class="profile-card-section-label">Events</div>
-
-                <div class="badge-row profile-badge-row">
-                    <span class="badge badge-danger">Urgent open: {{ profile.urgent_open_events_count }}</span>
-                    <span class="badge badge-warning">Important open: {{ profile.important_open_events_count }}</span>
-                    <span class="badge">Open: {{ profile.open_events_count }}</span>
-                    <span class="badge badge-muted">Archived: {{ profile.archived_events_count }}</span>
-                    <span class="badge badge-muted">Total: {{ profile.events_total }}</span>
+                <div class="profile-card-meta">
+                    <span>Last event:</span>
+                    <strong>
+                        {% if profile.last_event_at %}
+                            {{ profile.last_event_at|localtime|date:"Y-m-d H:i" }}
+                        {% else %}
+                            no events yet
+                        {% endif %}
+                    </strong>
                 </div>
             </div>
 
-            <div class="profile-card-section">
-                <div class="profile-card-section-label">AI usage</div>
+            <div class="profile-card-actions profile-card-actions-bottom">
+                <a class="button button-primary" href="{% url 'profile_detail' profile.id %}">
+                    View events
+                </a>
 
-                <div class="badge-row profile-badge-row">
-                    {% if profile.ai_daily_usage.is_unlimited %}
-                        <span class="badge badge-ai">
-                            AI today: {{ profile.ai_daily_usage.current_calls }}
-                        </span>
-                        <span class="badge badge-success">
-                            No profile AI limit
-                        </span>
-                        <span class="badge badge-muted">
-                            Uses account quota
-                        </span>
-                    {% else %}
-                        <span class="badge badge-ai">
-                            AI today: {{ profile.ai_daily_usage.current_calls }} / {{ profile.ai_daily_usage.limit }}
-                        </span>
-                        <span class="badge badge-muted">
-                            Profile AI limit: {{ profile.ai_daily_usage.limit }}/day
-                        </span>
-                    {% endif %}
-                </div>
+                <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
+                    Archived
+                    <span class="button-counter">{{ profile.archived_events_count }}</span>
+                </a>
+
+                <a class="button" href="{% url 'monitoring:profile_update' profile.id %}">
+                    Edit
+                </a>
+
+                <form
+                    method="post"
+                    action="{% url 'profile_delete' profile.id %}"
+                    class="inline-form"
+                    onsubmit="return confirm('Delete monitoring profile {{ profile.name|escapejs }}? This will delete related sources, messages, events and alerts.');"
+                >
+                    {% csrf_token %}
+                    <button class="button button-danger" type="submit">
+                        Delete
+                    </button>
+                </form>
             </div>
-
-            <div class="profile-card-meta">
-                <span>Last event:</span>
-                <strong>
-                    {% if profile.last_event_at %}
-                        {{ profile.last_event_at|localtime|date:"Y-m-d H:i" }}
-                    {% else %}
-                        no events yet
-                    {% endif %}
-                </strong>
-            </div>
-        </div>
-
-        <div class="profile-card-actions profile-card-actions-bottom">
-            <a class="button button-primary" href="{% url 'profile_detail' profile.id %}">
-                View events
-            </a>
-
-            <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
-                Archived
-                <span class="button-counter">{{ profile.archived_events_count }}</span>
-            </a>
-
-            <a class="button" href="{% url 'monitoring:profile_update' profile.id %}">
-                Edit
-            </a>
-
-            <form
-                method="post"
-                action="{% url 'profile_delete' profile.id %}"
-                class="inline-form"
-                onsubmit="return confirm('Delete monitoring profile {{ profile.name|escapejs }}? This will delete related sources, messages, events and alerts.');"
-            >
-                {% csrf_token %}
-                <button class="button button-danger" type="submit">
-                    Delete
-                </button>
-            </form>
-        </div>
-    </article>
-{% endfor %}
+        </article>
+    {% endfor %}
 
         </div>
     {% else %}

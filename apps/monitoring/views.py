@@ -142,6 +142,12 @@ def dashboard_view(request):
 
     profiles = list(profiles)
 
+    profiles_count = len(profiles)
+    active_profiles_count = sum(
+        1 for profile in profiles if profile.status == MonitoringProfile.Status.ACTIVE
+    )
+    disabled_profiles_count = profiles_count - active_profiles_count
+
     for profile in profiles:
         profile.ai_daily_usage = get_profile_daily_ai_usage(profile)
 
@@ -153,6 +159,9 @@ def dashboard_view(request):
             "user_ai_usage": user_ai_usage,
             "profiles": profiles,
             "profile_form": profile_form,
+            "profiles_count": profiles_count,
+            "active_profiles_count": active_profiles_count,
+            "disabled_profiles_count": disabled_profiles_count,
             "open_profile_modal": request.method == "POST" and profile_form.errors,
         },
     )

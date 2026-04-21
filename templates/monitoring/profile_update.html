@@ -9,8 +9,8 @@
         <p>Update profile settings without changing connected Telegram sources.</p>
     </div>
 
-    <a class="button" href="{% url 'profile_detail' profile.id %}">
-        Back to profile
+    <a class="button" href="{% url 'dashboard' %}">
+        Back to dashboard
     </a>
 </div>
 
@@ -25,27 +25,136 @@
         {% endif %}
 
         <div class="form-grid">
-            {% for field in form %}
-                <div class="{% if field.name == 'business_context' %}form-grid-full{% endif %}">
-                    <label for="{{ field.id_for_label }}">
-                        {{ field.label }}
+            <div>
+                <label for="{{ form.name.id_for_label }}">
+                    {{ form.name.label }}
+                </label>
+                {{ form.name }}
+                {% if form.name.help_text %}
+                    <div class="helptext">{{ form.name.help_text }}</div>
+                {% endif %}
+                {% for error in form.name.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label for="{{ form.scenario.id_for_label }}">
+                    {{ form.scenario.label }}
+                </label>
+                {{ form.scenario }}
+                {% if form.scenario.help_text %}
+                    <div class="helptext">{{ form.scenario.help_text }}</div>
+                {% endif %}
+                {% for error in form.scenario.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label for="{{ form.status.id_for_label }}">
+                    {{ form.status.label }}
+                </label>
+                {{ form.status }}
+                {% if form.status.help_text %}
+                    <div class="helptext">{{ form.status.help_text }}</div>
+                {% endif %}
+                {% for error in form.status.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="form-grid-full">
+                <label for="{{ form.business_context.id_for_label }}">
+                    {{ form.business_context.label }}
+                </label>
+                {{ form.business_context }}
+                {% if form.business_context.help_text %}
+                    <div class="helptext">{{ form.business_context.help_text }}</div>
+                {% endif %}
+                {% for error in form.business_context.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="form-grid-full">
+                <div class="form-section-label">
+                    Tracking settings
+                </div>
+
+                <div class="checkbox-grid">
+                    <label class="checkbox-row" for="{{ form.track_leads.id_for_label }}">
+                        {{ form.track_leads }}
+                        <span>{{ form.track_leads.label }}</span>
                     </label>
 
-                    {{ field }}
+                    <label class="checkbox-row" for="{{ form.track_complaints.id_for_label }}">
+                        {{ form.track_complaints }}
+                        <span>{{ form.track_complaints.label }}</span>
+                    </label>
 
-                    {% if field.help_text %}
-                        <div class="helptext">{{ field.help_text }}</div>
-                    {% endif %}
+                    <label class="checkbox-row" for="{{ form.track_requests.id_for_label }}">
+                        {{ form.track_requests }}
+                        <span>{{ form.track_requests.label }}</span>
+                    </label>
 
-                    {% for error in field.errors %}
-                        <div class="form-error">{{ error }}</div>
-                    {% endfor %}
+                    <label class="checkbox-row" for="{{ form.track_urgent.id_for_label }}">
+                        {{ form.track_urgent }}
+                        <span>{{ form.track_urgent.label }}</span>
+                    </label>
+
+                    <label class="checkbox-row" for="{{ form.track_general_activity.id_for_label }}">
+                        {{ form.track_general_activity }}
+                        <span>{{ form.track_general_activity.label }}</span>
+                    </label>
                 </div>
-            {% endfor %}
+
+                {% for error in form.track_leads.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+                {% for error in form.track_complaints.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+                {% for error in form.track_requests.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+                {% for error in form.track_urgent.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+                {% for error in form.track_general_activity.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label for="{{ form.ai_daily_call_limit.id_for_label }}">
+                    {{ form.ai_daily_call_limit.label }}
+                </label>
+                {{ form.ai_daily_call_limit }}
+                {% if form.ai_daily_call_limit.help_text %}
+                    <div class="helptext">{{ form.ai_daily_call_limit.help_text }}</div>
+                {% endif %}
+                {% for error in form.ai_daily_call_limit.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label for="{{ form.alert_chat_id.id_for_label }}">
+                    {{ form.alert_chat_id.label }}
+                </label>
+                {{ form.alert_chat_id }}
+                {% if form.alert_chat_id.help_text %}
+                    <div class="helptext">{{ form.alert_chat_id.help_text }}</div>
+                {% endif %}
+                {% for error in form.alert_chat_id.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+            </div>
         </div>
 
         <div class="form-actions">
-            <a class="button" href="{% url 'profile_detail' profile.id %}">
+            <a class="button" href="{% url 'dashboard' %}">
                 Cancel
             </a>
 
