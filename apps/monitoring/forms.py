@@ -34,10 +34,8 @@ class MonitoringProfileCreateForm(forms.ModelForm):
         required=False,
         max_length=255,
         help_text=(
-            "Optional. Telegram chat ID or @channelusername for outgoing alerts. "
-            "To get your chat ID: open your bot in Telegram, send /start, "
-            "and copy the ID from the bot's reply. "
-            "If empty, events will still appear in the dashboard."
+            "Optional.  Telegram chat ID for alerts.\n"
+            "After profile creation send `/start` to your bot to enable Alerts. "
         ),
     )
 
@@ -146,8 +144,7 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
         required=False,
         label="Alert chat ID",
         help_text=(
-            "Optional. Telegram chat ID for alerts. "
-            "After profile creation send /start to your bot to enable Alerts. "
+            "Optional. Change Telegram chat ID for alerts.\n"
         ),
         widget=forms.TextInput(
             attrs={

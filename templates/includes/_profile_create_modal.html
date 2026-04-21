@@ -75,7 +75,9 @@
                     {% if profile_form.alert_chat_id.errors %}
                         <div class="form-error">{{ profile_form.alert_chat_id.errors|striptags }}</div>
                     {% endif %}
-                    <div class="muted">{{ profile_form.alert_chat_id.help_text }}</div>
+                    <div class="muted form-help-text">
+                        {{ profile_form.alert_chat_id.help_text|linebreaksbr }}
+                    </div>
                 </div>
             </div>
 
