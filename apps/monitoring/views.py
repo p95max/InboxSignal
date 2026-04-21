@@ -56,7 +56,7 @@ def dashboard_view(request):
                     ),
                 )
 
-                return redirect("profile_detail", profile_id=profile.id)
+                return redirect("dashboard")
     else:
         profile_form = MonitoringProfileCreateForm()
 
@@ -577,7 +577,7 @@ def profile_update_view(request, profile_id: int):
                 f'Monitoring profile "{profile.name}" was updated.',
             )
 
-            return redirect("profile_detail", profile_id=profile.id)
+            return redirect("dashboard")
     else:
         form = MonitoringProfileUpdateForm(instance=profile)
 

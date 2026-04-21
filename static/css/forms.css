@@ -264,3 +264,75 @@ textarea::placeholder {
     background: var(--primary-soft);
 }
 
+/* =========================
+   Form readability overrides
+   ========================= */
+
+select,
+input,
+textarea,
+.form-control,
+.form-select {
+    color: #e5e7eb;
+    background: rgba(15, 23, 42, 0.72);
+    border-color: rgba(148, 163, 184, 0.28);
+}
+
+select:hover,
+input:hover,
+textarea:hover,
+.form-control:hover,
+.form-select:hover {
+    border-color: rgba(148, 163, 184, 0.48);
+    background: rgba(15, 23, 42, 0.82);
+}
+
+select:focus,
+input:focus,
+textarea:focus,
+.form-control:focus,
+.form-select:focus {
+    color: #f8fafc;
+    background: rgba(15, 23, 42, 0.92);
+    border-color: rgba(79, 140, 255, 0.85);
+    box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.18);
+}
+
+input::placeholder,
+textarea::placeholder,
+.form-control::placeholder {
+    color: #94a3b8;
+    opacity: 1;
+}
+
+select option {
+    color: #e5e7eb;
+    background: #111827;
+}
+
+.field label {
+    color: #cbd5e1;
+}
+
+.helptext,
+.form-help,
+.form-text,
+.form-field-help {
+    color: #9ca3af;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #e5e7eb;
+    box-shadow: 0 0 0 1000px #111827 inset;
+    caret-color: #e5e7eb;
+}
+
+.form-control {
+    width: 100%;
+    margin-top: 6px;
+}
+

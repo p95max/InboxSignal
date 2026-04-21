@@ -34,8 +34,11 @@ def check_and_reserve_ai_usage(profile: MonitoringProfile) -> AIUsageReservation
 
     Uses Redis cache counters. This is an MVP-grade guard:
     - daily calls per user
-    - daily calls per profile
+    - optional daily calls per profile
     - daily estimated cost per user
+
+    If profile.ai_daily_call_limit is empty, only the account-level user quota
+    and cost limit are applied.
     """
 
     user_id = profile.owner_id
@@ -55,9 +58,12 @@ def check_and_reserve_ai_usage(profile: MonitoringProfile) -> AIUsageReservation
             "AI daily call limit per user was exceeded."
         )
 
-    profile_limit = profile.ai_daily_call_limit or settings.AI_DAILY_CALL_LIMIT_PER_PROFILE
+    profile_limit = profile.ai_daily_call_limit
 
-    if current_profile_calls >= profile_limit:
+    if (
+        profile_limit is not None
+        and current_profile_calls >= profile_limit
+    ):
         raise AIUsageLimitExceeded(
             "AI daily call limit per profile was exceeded."
         )
@@ -77,6 +83,8 @@ def check_and_reserve_ai_usage(profile: MonitoringProfile) -> AIUsageReservation
             "user_id": user_id,
             "user_calls": current_user_calls + 1,
             "profile_calls": current_profile_calls + 1,
+            "profile_limit": profile_limit,
+            "profile_limit_enabled": profile_limit is not None,
             "user_cost": str(current_user_cost),
         },
     )
@@ -204,45 +212,47 @@ class DailyAIUsageSnapshot:
     """Display-friendly daily AI usage snapshot."""
 
     current_calls: int
-    limit: int
-    remaining: int
+    limit: int | None
+    remaining: int | None
     percent: int
     uses_global_limit: bool = False
+    is_unlimited: bool = False
 
 
 def get_user_daily_ai_usage(user_id: int) -> DailyAIUsageSnapshot:
     """Return daily AI usage snapshot for one user."""
 
-    limit = settings.AI_DAILY_CALL_LIMIT_PER_USER
     key = build_daily_key("ai-calls-user", user_id)
     current_calls = get_int_cache_value(key)
 
     return build_daily_ai_usage_snapshot(
         current_calls=current_calls,
-        limit=limit,
+        limit=settings.AI_DAILY_CALL_LIMIT_PER_USER,
         uses_global_limit=True,
     )
-
 
 def get_profile_daily_ai_usage(profile: MonitoringProfile) -> DailyAIUsageSnapshot:
     """Return daily AI usage snapshot for one monitoring profile."""
 
-    profile_limit = getattr(profile, "ai_daily_call_limit", None)
-
-    if profile_limit is None:
-        limit = settings.AI_DAILY_CALL_LIMIT_PER_PROFILE
-        uses_global_limit = True
-    else:
-        limit = profile_limit
-        uses_global_limit = False
-
     key = build_daily_key("ai-calls-profile", profile.id)
     current_calls = get_int_cache_value(key)
 
+    profile_limit = getattr(profile, "ai_daily_call_limit", None)
+
+    if profile_limit is None:
+        return DailyAIUsageSnapshot(
+            current_calls=current_calls,
+            limit=None,
+            remaining=None,
+            percent=0,
+            uses_global_limit=False,
+            is_unlimited=True,
+        )
+
     return build_daily_ai_usage_snapshot(
         current_calls=current_calls,
-        limit=limit,
-        uses_global_limit=uses_global_limit,
+        limit=profile_limit,
+        uses_global_limit=False,
     )
 
 
@@ -270,4 +280,6 @@ def build_daily_ai_usage_snapshot(
         remaining=remaining,
         percent=percent,
         uses_global_limit=uses_global_limit,
+        is_unlimited=False,
     )
+

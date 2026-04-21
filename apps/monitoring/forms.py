@@ -143,9 +143,7 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
     alert_chat_id = forms.CharField(
         required=False,
         label="Alert chat ID",
-        help_text=(
-            "Optional. Change Telegram chat ID for alerts.\n"
-        ),
+        help_text="Optional. Change Telegram chat ID for alerts.",
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
@@ -159,13 +157,13 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
         min_value=1,
         label="AI daily call limit",
         help_text=(
-            "Optional. Leave empty to use the global profile limit. "
-            "Set a lower value to limit AI usage for this profile."
+            "Optional. Leave empty to disable the profile-level AI limit. "
+            "The profile will use the account-level daily AI quota."
         ),
         widget=forms.NumberInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "Use global default",
+                "placeholder": "No profile AI limit",
                 "min": 1,
             }
         ),
@@ -211,13 +209,14 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
                 source.metadata or {}
             ).get("alert_chat_id", "")
 
-        global_profile_limit = settings.AI_DAILY_CALL_LIMIT_PER_PROFILE
+        account_ai_limit = settings.AI_DAILY_CALL_LIMIT_PER_USER
 
-        self.fields["ai_daily_call_limit"].widget.attrs["max"] = global_profile_limit
+        self.fields["ai_daily_call_limit"].widget.attrs["max"] = account_ai_limit
         self.fields["ai_daily_call_limit"].help_text = (
-            "Optional. Leave empty to use the global profile limit "
-            f"({global_profile_limit} AI calls/day). "
-            "You can set a lower custom limit for this profile."
+            "Optional. Leave empty to disable the profile-level AI limit. "
+            f"The profile will use the account-level daily AI quota "
+            f"({account_ai_limit} AI calls/day). "
+            "Set a number to add a stricter limit for this profile."
         )
 
     def clean_ai_daily_call_limit(self):
@@ -226,13 +225,13 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
         if value is None:
             return None
 
-        global_profile_limit = settings.AI_DAILY_CALL_LIMIT_PER_PROFILE
+        account_ai_limit = settings.AI_DAILY_CALL_LIMIT_PER_USER
 
-        if value > global_profile_limit:
+        if value > account_ai_limit:
             raise forms.ValidationError(
                 (
-                    "AI daily call limit cannot be higher than the global "
-                    f"profile limit ({global_profile_limit})."
+                    "Profile AI limit cannot be higher than the account "
+                    f"daily AI quota ({account_ai_limit})."
                 )
             )
 

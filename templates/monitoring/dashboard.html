@@ -61,57 +61,86 @@
 
 {% for profile in profiles %}
     <article class="card profile-card">
-        <div class="profile-card-header">
-            <div class="profile-card-title">
-                <a class="profile-name" href="{% url 'profile_detail' profile.id %}">
-                    {{ profile.name }}
-                </a>
-                <div class="muted">
-                     {% if profile.telegram_bot_sources %}
-                {% for source in profile.telegram_bot_sources %}
-                    <span class="badge {% if source.status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
-                        Adapter: Telegram bot · {{ source.get_status_display }}
-                    </span>
-                    {% if source.external_username %}
-                        <span class="badge badge-muted">
-                            @{{ source.external_username }}
+        <div class="profile-card-main">
+            <div class="profile-card-header">
+                <div class="profile-card-title">
+                    <a class="profile-name" href="{% url 'profile_detail' profile.id %}">
+                        {{ profile.name }}
+                    </a>
+
+                    <div class="profile-status-row">
+                        <span class="badge {% if profile.status == 'active' %}badge-success{% else %}badge-muted{% endif %}">
+                            Profile status: {{ profile.get_status_display }}
                         </span>
-                    {% endif %}
-                {% endfor %}
-            {% else %}
-                <span class="badge badge-muted">
-                    Adapter: Telegram bot not connected
-                </span>
-            {% endif %}
+
+                        {% if profile.telegram_bot_sources %}
+                            {% for source in profile.telegram_bot_sources %}
+                                <span class="badge {% if source.status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
+                                    Adapter: Telegram bot
+                                </span>
+
+                                {% if source.external_username %}
+                                    <span class="badge badge-muted">
+                                        @{{ source.external_username }}
+                                    </span>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="badge badge-muted">
+                                Adapter: Telegram bot not connected
+                            </span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="badge-row">
-            <span class="badge badge-danger">Urgent open: {{ profile.urgent_open_events_count }}</span>
-            <span class="badge badge-warning">Important open: {{ profile.important_open_events_count }}</span>
-            <span class="badge">Open: {{ profile.open_events_count }}</span>
-            <span class="badge badge-muted">Total: {{ profile.events_total }}</span>
-            <span class="badge badge-muted">Archived: {{ profile.archived_events_count }}</span>
+            <div class="profile-card-section">
+                <div class="profile-card-section-label">Events</div>
 
-            <span class="badge badge-ai">
-                AI today: {{ profile.ai_daily_usage.current_calls }} / {{ profile.ai_daily_usage.limit }}
-            </span>
+                <div class="badge-row profile-badge-row">
+                    <span class="badge badge-danger">Urgent open: {{ profile.urgent_open_events_count }}</span>
+                    <span class="badge badge-warning">Important open: {{ profile.important_open_events_count }}</span>
+                    <span class="badge">Open: {{ profile.open_events_count }}</span>
+                    <span class="badge badge-muted">Archived: {{ profile.archived_events_count }}</span>
+                    <span class="badge badge-muted">Total: {{ profile.events_total }}</span>
+                </div>
+            </div>
 
-            {% if profile.ai_daily_usage.uses_global_limit %}
-                <span class="badge badge-muted">AI limit: global default</span>
-            {% else %}
-                <span class="badge badge-muted">AI limit: profile custom</span>
-            {% endif %}
-        </div>
+            <div class="profile-card-section">
+                <div class="profile-card-section-label">AI usage</div>
 
-        <div class="muted">
-            Last event:
-            {% if profile.last_event_at %}
-                {{ profile.last_event_at|localtime|date:"Y-m-d H:i" }}
-            {% else %}
-                no events yet
-            {% endif %}
+                <div class="badge-row profile-badge-row">
+                    {% if profile.ai_daily_usage.is_unlimited %}
+                        <span class="badge badge-ai">
+                            AI today: {{ profile.ai_daily_usage.current_calls }}
+                        </span>
+                        <span class="badge badge-success">
+                            No profile AI limit
+                        </span>
+                        <span class="badge badge-muted">
+                            Uses account quota
+                        </span>
+                    {% else %}
+                        <span class="badge badge-ai">
+                            AI today: {{ profile.ai_daily_usage.current_calls }} / {{ profile.ai_daily_usage.limit }}
+                        </span>
+                        <span class="badge badge-muted">
+                            Profile AI limit: {{ profile.ai_daily_usage.limit }}/day
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="profile-card-meta">
+                <span>Last event:</span>
+                <strong>
+                    {% if profile.last_event_at %}
+                        {{ profile.last_event_at|localtime|date:"Y-m-d H:i" }}
+                    {% else %}
+                        no events yet
+                    {% endif %}
+                </strong>
+            </div>
         </div>
 
         <div class="profile-card-actions profile-card-actions-bottom">
@@ -119,16 +148,15 @@
                 View events
             </a>
 
-            <a
-                class="button"
-                href="{% url 'profile_detail' profile.id %}?status=archived"
-            >
-                Archived events
+            <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
+                Archived
                 <span class="button-counter">{{ profile.archived_events_count }}</span>
             </a>
+
             <a class="button" href="{% url 'monitoring:profile_update' profile.id %}">
                 Edit
             </a>
+
             <form
                 method="post"
                 action="{% url 'profile_delete' profile.id %}"
