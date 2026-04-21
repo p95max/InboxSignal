@@ -35,6 +35,8 @@ class MonitoringProfileCreateForm(forms.ModelForm):
         max_length=255,
         help_text=(
             "Optional. Telegram chat ID or @channelusername for outgoing alerts. "
+            "To get your chat ID: open your bot in Telegram, send /start, "
+            "and copy the ID from the bot's reply. "
             "If empty, events will still appear in the dashboard."
         ),
     )
@@ -140,6 +142,22 @@ class MonitoringProfileCreateForm(forms.ModelForm):
 class MonitoringProfileUpdateForm(forms.ModelForm):
     """Update editable monitoring profile settings."""
 
+    alert_chat_id = forms.CharField(
+        required=False,
+        label="Alert chat ID",
+        help_text=(
+            "Optional. Telegram chat ID or @channelusername for alerts. "
+            "Send /start to your bot to get your chat ID. "
+            "If empty, alerts will not be sent."
+        ),
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Example: 330297984 or @channelusername",
+            }
+        ),
+    )
+
     class Meta:
         model = MonitoringProfile
         fields = [
@@ -165,6 +183,38 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
                 }
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        source = self.instance.connected_sources.filter(
+            source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+            is_deleted=False,
+        ).first()
+
+        if source:
+            self.fields["alert_chat_id"].initial = (
+                source.metadata or {}
+            ).get("alert_chat_id", "")
+
+    def save(self, commit=True):
+        profile = super().save(commit)
+
+        alert_chat_id = self.cleaned_data.get("alert_chat_id", "").strip()
+
+        source = profile.connected_sources.filter(
+            source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+            is_deleted=False,
+        ).first()
+
+        if source:
+            metadata = source.metadata or {}
+            metadata["alert_chat_id"] = alert_chat_id
+
+            source.metadata = metadata
+            source.save(update_fields=["metadata", "updated_at"])
+
+        return profile
 
 
 

@@ -100,6 +100,20 @@ def build_telegram_alert_text(alert: AlertDelivery) -> str:
 
     title = event.title or f"{event.priority.title()} {event.category.title()}"
 
+    analysis_label = (
+        "AI analysis"
+        if event.detection_source == event.DetectionSource.AI
+        else "Rules"
+        if event.detection_source == event.DetectionSource.RULES
+        else event.get_detection_source_display()
+    )
+
+    summary_label = (
+        "AI summary"
+        if event.detection_source == event.DetectionSource.AI
+        else "Summary"
+    )
+
     parts = [
         "🚨 New monitoring alert",
         "",
@@ -109,13 +123,14 @@ def build_telegram_alert_text(alert: AlertDelivery) -> str:
         f"🏷 Category: {event.category}",
         f"⚡ Priority: {event.priority}",
         f"📊 Score: {event.priority_score}",
+        f"🧠 Analysis: {analysis_label}",
     ]
 
     if event.summary:
         parts.extend(
             [
                 "",
-                f"Summary: {event.summary}",
+                f"📝 {summary_label}: {event.summary}",
             ]
         )
 
@@ -123,7 +138,7 @@ def build_telegram_alert_text(alert: AlertDelivery) -> str:
         parts.extend(
             [
                 "",
-                f"Your message: {message_preview}",
+                f"💬 Message preview: {message_preview}",
             ]
         )
 
