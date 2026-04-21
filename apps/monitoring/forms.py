@@ -163,7 +163,7 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
         widget=forms.NumberInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "No profile AI limit",
+                "placeholder": " ⚠️ No profile AI limit",
                 "min": 1,
             }
         ),
