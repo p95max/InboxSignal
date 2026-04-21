@@ -1,9 +1,19 @@
-from pathlib import Path
 from decimal import Decimal
+from pathlib import Path
 
 import environ
 
+
+# ==============================================================================
+# Base paths
+# ==============================================================================
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+
+# ==============================================================================
+# Environment
+# ==============================================================================
 
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
@@ -11,13 +21,34 @@ env = environ.Env(
 
 environ.Env.read_env(BASE_DIR / ".env")
 
+
+# ==============================================================================
+# Core Django settings
+# ==============================================================================
+
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 DEBUG = env("DJANGO_DEBUG")
 
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])
 
+ROOT_URLCONF = "config.urls"
+
+WSGI_APPLICATION = "config.wsgi.application"
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+TIME_ZONE = "Europe/Berlin"
+
+USE_TZ = True
+
+
+# ==============================================================================
+# Applications
+# ==============================================================================
+
 INSTALLED_APPS = [
+    # Django apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -25,6 +56,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
+    # Project apps
     "apps.accounts.apps.AccountsConfig",
     "apps.core",
     "apps.monitoring.apps.MonitoringConfig",
@@ -32,6 +64,11 @@ INSTALLED_APPS = [
     "apps.ai.apps.AiConfig",
     "apps.alerts.apps.AlertsConfig",
 ]
+
+
+# ==============================================================================
+# Middleware
+# ==============================================================================
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -43,7 +80,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "config.urls"
+
+# ==============================================================================
+# Templates
+# ==============================================================================
 
 TEMPLATES = [
     {
@@ -60,43 +100,204 @@ TEMPLATES = [
     }
 ]
 
-WSGI_APPLICATION = "config.wsgi.application"
+
+# ==============================================================================
+# Database
+# ==============================================================================
 
 DATABASES = {
-    "default": env.db("DATABASE_URL")
+    "default": env.db("DATABASE_URL"),
 }
 
+
+# ==============================================================================
+# Static files
+# ==============================================================================
+
 STATIC_URL = "/static/"
+
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ==============================================================================
+# Authentication
+# ==============================================================================
+
+AUTH_USER_MODEL = "accounts.User"
+
+LOGIN_URL = "login"
+
+LOGIN_REDIRECT_URL = "dashboard"
+
+LOGOUT_REDIRECT_URL = "home"
+
+
+# ==============================================================================
+# Redis / Cache
+# ==============================================================================
 
 REDIS_URL = env("REDIS_URL", default="redis://redis:6379/0")
+
+REDIS_CACHE_URL = env("REDIS_CACHE_URL", default="redis://redis:6379/2")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_CACHE_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
+
+
+# ==============================================================================
+# Celery
+# ==============================================================================
+
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL)
+
+CELERY_RESULT_BACKEND = env(
+    "CELERY_RESULT_BACKEND",
+    default="redis://redis:6379/1",
+)
+
+
+# ==============================================================================
+# Security / Encryption
+# ==============================================================================
+
+FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="")
+
+
+# ==============================================================================
+# Telegram integration limits
+# ==============================================================================
 
 TELEGRAM_SOURCE_WEBHOOK_LIMIT_PER_MINUTE = env.int(
     "TELEGRAM_SOURCE_WEBHOOK_LIMIT_PER_MINUTE",
     default=120,
 )
+
 TELEGRAM_PROFILE_WEBHOOK_LIMIT_PER_DAY = env.int(
     "TELEGRAM_PROFILE_WEBHOOK_LIMIT_PER_DAY",
     default=5000,
 )
 
+
+# ==============================================================================
+# Telegram customer anti-spam limits
+# ==============================================================================
+
+TELEGRAM_CLIENT_MESSAGE_INTERVAL_SECONDS = env.int(
+    "TELEGRAM_CLIENT_MESSAGE_INTERVAL_SECONDS",
+    default=15,
+)
+
+TELEGRAM_CLIENT_DAILY_MESSAGE_LIMIT = env.int(
+    "TELEGRAM_CLIENT_DAILY_MESSAGE_LIMIT",
+    default=10,
+)
+
+TELEGRAM_CLIENT_RATE_LIMIT_NOTICE_COOLDOWN_SECONDS = env.int(
+    "TELEGRAM_CLIENT_RATE_LIMIT_NOTICE_COOLDOWN_SECONDS",
+    default=60,
+)
+
+
+# ==============================================================================
+# Telegram customer auto-replies
+# ==============================================================================
+
+TELEGRAM_CUSTOMER_AUTO_REPLY_ENABLED = env.bool(
+    "TELEGRAM_CUSTOMER_AUTO_REPLY_ENABLED",
+    default=True,
+)
+
+TELEGRAM_CUSTOMER_AUTO_REPLY_COOLDOWN_SECONDS = env.int(
+    "TELEGRAM_CUSTOMER_AUTO_REPLY_COOLDOWN_SECONDS",
+    default=300,
+)
+
+
+# ==============================================================================
+# Registered user rate limits
+# ==============================================================================
+
 REGISTERED_PROFILE_CREATE_LIMIT_PER_DAY = env.int(
     "REGISTERED_PROFILE_CREATE_LIMIT_PER_DAY",
     default=20,
 )
+
 REGISTERED_EVENT_ACTION_LIMIT_PER_MINUTE = env.int(
     "REGISTERED_EVENT_ACTION_LIMIT_PER_MINUTE",
     default=60,
 )
 
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL)
-CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://redis:6379/1")
+
+# ==============================================================================
+# AI
+# ==============================================================================
+
+AI_ENABLED = env.bool("AI_ENABLED", default=False)
+
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+
+OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-4o-mini")
+
+AI_PROMPT_VERSION = env("AI_PROMPT_VERSION", default="ai_v1")
+
+AI_REQUEST_TIMEOUT = env.float("AI_REQUEST_TIMEOUT", default=20.0)
+
+AI_MIN_TEXT_LENGTH = env.int("AI_MIN_TEXT_LENGTH", default=12)
+
+AI_DAILY_CALL_LIMIT_PER_USER = env.int(
+    "AI_DAILY_CALL_LIMIT_PER_USER",
+    default=50,
+)
+
+AI_DAILY_CALL_LIMIT_PER_PROFILE = env.int(
+    "AI_DAILY_CALL_LIMIT_PER_PROFILE",
+    default=20,
+)
+
+AI_DAILY_COST_LIMIT_USD_PER_USER = Decimal(
+    env("AI_DAILY_COST_LIMIT_USD_PER_USER", default="1.00")
+)
+
+# Default values for gpt-4o-mini text tokens.
+# Keep them configurable because provider pricing can change.
+AI_INPUT_COST_PER_1M_TOKENS = Decimal(
+    env("AI_INPUT_COST_PER_1M_TOKENS", default="0.15")
+)
+
+AI_OUTPUT_COST_PER_1M_TOKENS = Decimal(
+    env("AI_OUTPUT_COST_PER_1M_TOKENS", default="0.60")
+)
+
+
+# ==============================================================================
+# Alerts
+# ==============================================================================
+
+ALERT_COOLDOWN_URGENT_SECONDS = env.int(
+    "ALERT_COOLDOWN_URGENT_SECONDS",
+    default=0,
+)
+
+ALERT_COOLDOWN_IMPORTANT_SECONDS = env.int(
+    "ALERT_COOLDOWN_IMPORTANT_SECONDS",
+    default=0,
+)
+
+
+# ==============================================================================
+# Logging
+# ==============================================================================
 
 LOGGING = {
     "version": 1,
@@ -130,88 +331,3 @@ LOGGING = {
         },
     },
 }
-
-AUTH_USER_MODEL = "accounts.User"
-
-FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="")
-
-AI_ENABLED = env.bool("AI_ENABLED", default=False)
-OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
-OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-4o-mini")
-AI_PROMPT_VERSION = env("AI_PROMPT_VERSION", default="ai_v1")
-AI_REQUEST_TIMEOUT = env.float("AI_REQUEST_TIMEOUT", default=20.0)
-AI_MIN_TEXT_LENGTH = env.int("AI_MIN_TEXT_LENGTH", default=12)
-
-AI_DAILY_CALL_LIMIT_PER_USER = env.int(
-    "AI_DAILY_CALL_LIMIT_PER_USER",
-    default=50,
-)
-AI_DAILY_CALL_LIMIT_PER_PROFILE = env.int(
-    "AI_DAILY_CALL_LIMIT_PER_PROFILE",
-    default=20,
-)
-AI_DAILY_COST_LIMIT_USD_PER_USER = Decimal(
-    env("AI_DAILY_COST_LIMIT_USD_PER_USER", default="1.00")
-)
-
-# Default values for gpt-4o-mini text tokens.
-# Keep them configurable because provider pricing can change.
-AI_INPUT_COST_PER_1M_TOKENS = Decimal(
-    env("AI_INPUT_COST_PER_1M_TOKENS", default="0.15")
-)
-AI_OUTPUT_COST_PER_1M_TOKENS = Decimal(
-    env("AI_OUTPUT_COST_PER_1M_TOKENS", default="0.60")
-)
-
-ALERT_COOLDOWN_URGENT_SECONDS = env.int(
-    "ALERT_COOLDOWN_URGENT_SECONDS",
-    default=0,
-)
-ALERT_COOLDOWN_IMPORTANT_SECONDS = env.int(
-    "ALERT_COOLDOWN_IMPORTANT_SECONDS",
-    default=0,
-)
-
-REDIS_CACHE_URL = env("REDIS_CACHE_URL", default="redis://redis:6379/2")
-
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": env("REDIS_CACHE_URL", default="redis://redis:6379/2"),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-    }
-}
-
-LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "dashboard"
-LOGOUT_REDIRECT_URL = "home"
-
-TIME_ZONE = "Europe/Berlin"
-USE_TZ = True
-
-TELEGRAM_CLIENT_MESSAGE_INTERVAL_SECONDS = env.int(
-    "TELEGRAM_CLIENT_MESSAGE_INTERVAL_SECONDS",
-    default=15,
-)
-
-TELEGRAM_CLIENT_DAILY_MESSAGE_LIMIT = env.int(
-    "TELEGRAM_CLIENT_DAILY_MESSAGE_LIMIT",
-    default=100,
-)
-
-TELEGRAM_CLIENT_RATE_LIMIT_NOTICE_COOLDOWN_SECONDS = env.int(
-    "TELEGRAM_CLIENT_RATE_LIMIT_NOTICE_COOLDOWN_SECONDS",
-    default=60,
-)
-
-TELEGRAM_CUSTOMER_AUTO_REPLY_ENABLED = env.bool(
-    "TELEGRAM_CUSTOMER_AUTO_REPLY_ENABLED",
-    default=True,
-)
-
-TELEGRAM_CUSTOMER_AUTO_REPLY_COOLDOWN_SECONDS = env.int(
-    "TELEGRAM_CUSTOMER_AUTO_REPLY_COOLDOWN_SECONDS",
-    default=300,
-)
