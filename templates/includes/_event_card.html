@@ -88,9 +88,20 @@
                 </div>
 
                 {% if event.summary %}
-                    <div>
-                        <strong>Summary:</strong>
-                        {{ event.summary }}
+                    <div class="event-summary">
+                        <div class="event-summary-label">
+                            {% if event.detection_source == "ai" %}
+                                AI summary
+                            {% elif event.detection_source == "rules" %}
+                                Rules summary
+                            {% else %}
+                                Summary
+                            {% endif %}
+                        </div>
+
+                        <div class="event-summary-message">
+                            {{ event.summary }}
+                        </div>
                     </div>
                 {% endif %}
 

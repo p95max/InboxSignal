@@ -100,25 +100,21 @@ def create_alert_delivery_for_event(event: Event) -> AlertDelivery | None:
 
 
 def get_default_recipient(event: Event) -> str:
-    """Return Telegram alert recipient for MVP alert delivery.
+    """Return explicit Telegram alert recipient for MVP alert delivery.
 
-    Prefer explicit alert_chat_id from ConnectedSource metadata.
-    Fall back to incoming Telegram chat id for directly ingested/test messages.
+    Alerts are internal notifications and must not be sent back to the customer.
+    The recipient must be configured explicitly in ConnectedSource.metadata["alert_chat_id"].
     """
 
     message = event.incoming_message
 
-    if message is None:
+    if message is None or message.source is None:
         return ""
 
-    if message.source:
-        metadata = message.source.metadata or {}
-        alert_chat_id = str(metadata.get("alert_chat_id", "")).strip()
+    metadata = message.source.metadata or {}
+    alert_chat_id = str(metadata.get("alert_chat_id", "")).strip()
 
-        if alert_chat_id:
-            return alert_chat_id
-
-    return str(message.external_chat_id or "").strip()
+    return alert_chat_id
 
 
 def build_alert_payload(event: Event) -> dict:
@@ -133,5 +129,89 @@ def build_alert_payload(event: Event) -> dict:
         "title": event.title,
         "summary": event.summary,
         "message": event.message_text_snapshot,
+        "detection_source": event.detection_source,
         "extracted_data": event.extracted_data,
     }
+
+
+def build_telegram_alert_text(alert: AlertDelivery) -> str:
+    """Build a compact internal Telegram alert text."""
+
+    event = alert.event
+    incoming_message = event.incoming_message
+
+    contact_label = "Unknown contact"
+
+    if incoming_message:
+        if incoming_message.external_contact:
+            contact = incoming_message.external_contact
+            contact_label = (
+                contact.display_name
+                or (f"@{contact.username}" if contact.username else "")
+                or contact.external_user_id
+                or contact.external_chat_id
+                or "Unknown contact"
+            )
+        else:
+            contact_label = (
+                incoming_message.sender_display_name
+                or (
+                    f"@{incoming_message.sender_username}"
+                    if incoming_message.sender_username
+                    else ""
+                )
+                or incoming_message.sender_id
+                or incoming_message.external_chat_id
+                or "Unknown contact"
+            )
+
+    message_preview = (event.message_text_snapshot or "").strip()
+
+    if len(message_preview) > 220:
+        message_preview = f"{message_preview[:220].rstrip()}..."
+
+    title = event.title or f"{event.priority.title()} {event.category.title()}"
+
+    analysis_label = (
+        "AI analysis"
+        if event.detection_source == event.DetectionSource.AI
+        else "Rules"
+        if event.detection_source == event.DetectionSource.RULES
+        else event.get_detection_source_display()
+    )
+
+    summary_label = (
+        "AI summary"
+        if event.detection_source == event.DetectionSource.AI
+        else "Summary"
+    )
+
+    parts = [
+        "New monitoring alert",
+        "",
+        f"Title: {title}",
+        f"Profile: {event.profile.name}",
+        f"From: {contact_label}",
+        f"Category: {event.category}",
+        f"Priority: {event.priority}",
+        f"Score: {event.priority_score}",
+        f"Analysis: {analysis_label}",
+    ]
+
+    if event.summary:
+        parts.extend(
+            [
+                "",
+                f"{summary_label}: {event.summary}",
+            ]
+        )
+
+    if message_preview:
+        parts.extend(
+            [
+                "",
+                f"Message preview: {message_preview}",
+            ]
+        )
+
+    return "\n".join(parts)

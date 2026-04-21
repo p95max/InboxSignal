@@ -186,4 +186,35 @@
     color: var(--muted-soft);
     font-size: 13px;
 }
+/* Event summary block */
+
+.event-summary {
+    margin-top: 2px;
+}
+
+.event-summary-label {
+    margin-bottom: 6px;
+    color: var(--muted-soft);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.event-summary-message {
+    padding: 10px 12px;
+    border: 1px solid rgba(79, 140, 255, 0.20);
+    border-radius: var(--radius-sm);
+    background:
+        linear-gradient(
+            180deg,
+            rgba(79, 140, 255, 0.055),
+            rgba(255, 255, 255, 0.012)
+        ),
+        rgba(8, 13, 27, 0.58);
+    color: #cfe0f6;
+    font-size: 14px;
+    line-height: 1.45;
+    white-space: normal;
+}
 
