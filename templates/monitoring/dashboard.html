@@ -39,6 +39,18 @@
         <div class="stat-value">{{ stats.open_total }}</div>
         <div class="stat-label">Open events</div>
     </div>
+    <div class="card">
+        <div class="stat-value">
+            {{ user_ai_usage.current_calls }} / {{ user_ai_usage.limit }}
+        </div>
+        <div class="stat-label">
+            AI calls today
+        </div>
+        <div class="muted">
+            Remaining: {{ user_ai_usage.remaining }}
+        </div>
+    </div>
+
 </section>
 
 <section class="section">
@@ -81,6 +93,16 @@
             <span class="badge">Open: {{ profile.open_events_count }}</span>
             <span class="badge badge-muted">Total: {{ profile.events_total }}</span>
             <span class="badge badge-muted">Archived: {{ profile.archived_events_count }}</span>
+
+            <span class="badge badge-ai">
+                AI today: {{ profile.ai_daily_usage.current_calls }} / {{ profile.ai_daily_usage.limit }}
+            </span>
+
+            {% if profile.ai_daily_usage.uses_global_limit %}
+                <span class="badge badge-muted">AI limit: global default</span>
+            {% else %}
+                <span class="badge badge-muted">AI limit: profile custom</span>
+            {% endif %}
         </div>
 
         <div class="muted">

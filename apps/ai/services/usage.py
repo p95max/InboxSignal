@@ -197,3 +197,77 @@ def increment_daily_counter(
     except ValueError:
         cache.set(key, amount, timeout=timeout)
         return amount
+
+
+@dataclass(frozen=True)
+class DailyAIUsageSnapshot:
+    """Display-friendly daily AI usage snapshot."""
+
+    current_calls: int
+    limit: int
+    remaining: int
+    percent: int
+    uses_global_limit: bool = False
+
+
+def get_user_daily_ai_usage(user_id: int) -> DailyAIUsageSnapshot:
+    """Return daily AI usage snapshot for one user."""
+
+    limit = settings.AI_DAILY_CALL_LIMIT_PER_USER
+    key = build_daily_key("ai-calls-user", user_id)
+    current_calls = get_int_cache_value(key)
+
+    return build_daily_ai_usage_snapshot(
+        current_calls=current_calls,
+        limit=limit,
+        uses_global_limit=True,
+    )
+
+
+def get_profile_daily_ai_usage(profile: MonitoringProfile) -> DailyAIUsageSnapshot:
+    """Return daily AI usage snapshot for one monitoring profile."""
+
+    profile_limit = getattr(profile, "ai_daily_call_limit", None)
+
+    if profile_limit is None:
+        limit = settings.AI_DAILY_CALL_LIMIT_PER_PROFILE
+        uses_global_limit = True
+    else:
+        limit = profile_limit
+        uses_global_limit = False
+
+    key = build_daily_key("ai-calls-profile", profile.id)
+    current_calls = get_int_cache_value(key)
+
+    return build_daily_ai_usage_snapshot(
+        current_calls=current_calls,
+        limit=limit,
+        uses_global_limit=uses_global_limit,
+    )
+
+
+def build_daily_ai_usage_snapshot(
+    *,
+    current_calls: int,
+    limit: int,
+    uses_global_limit: bool,
+) -> DailyAIUsageSnapshot:
+    """Build normalized daily AI usage snapshot."""
+
+    current_calls = max(int(current_calls or 0), 0)
+    limit = max(int(limit or 0), 0)
+
+    if limit > 0:
+        remaining = max(limit - current_calls, 0)
+        percent = min(int(current_calls / limit * 100), 100)
+    else:
+        remaining = 0
+        percent = 100 if current_calls > 0 else 0
+
+    return DailyAIUsageSnapshot(
+        current_calls=current_calls,
+        limit=limit,
+        remaining=remaining,
+        percent=percent,
+        uses_global_limit=uses_global_limit,
+    )

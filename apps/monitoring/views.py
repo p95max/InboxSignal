@@ -15,6 +15,10 @@ from apps.integrations.models import ConnectedSource
 from apps.monitoring.forms import MonitoringProfileCreateForm, MonitoringProfileUpdateForm
 from apps.monitoring.models import Event, MonitoringProfile
 from apps.alerts.models import AlertDelivery
+from apps.ai.services.usage import (
+    get_profile_daily_ai_usage,
+    get_user_daily_ai_usage,
+)
 
 
 @login_required
@@ -72,6 +76,8 @@ def dashboard_view(request):
         "important_open": open_events.filter(priority=Event.Priority.IMPORTANT).count(),
         "open_total": open_events.count(),
     }
+
+    user_ai_usage = get_user_daily_ai_usage(request.user.id)
 
     profiles = (
         MonitoringProfile.objects.filter(owner=request.user)
@@ -134,11 +140,17 @@ def dashboard_view(request):
         .order_by("-last_event_at", "-updated_at")
     )
 
+    profiles = list(profiles)
+
+    for profile in profiles:
+        profile.ai_daily_usage = get_profile_daily_ai_usage(profile)
+
     return render(
         request,
         "monitoring/dashboard.html",
         {
             "stats": stats,
+            "user_ai_usage": user_ai_usage,
             "profiles": profiles,
             "profile_form": profile_form,
             "open_profile_modal": request.method == "POST" and profile_form.errors,
