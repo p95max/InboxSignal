@@ -1,3 +1,7 @@
+from urllib.parse import urlencode
+
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Prefetch, Q
 from django.http import Http404
@@ -5,12 +9,10 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from urllib.parse import urlencode
-from django.contrib import messages
 
+from apps.core.services.rate_limits import RateLimitPeriod, check_rate_limit
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.forms import MonitoringProfileCreateForm, MonitoringProfileUpdateForm
-
 from apps.monitoring.models import Event, MonitoringProfile
 
 
@@ -22,15 +24,34 @@ def dashboard_view(request):
         profile_form = MonitoringProfileCreateForm(request.POST)
 
         if profile_form.is_valid():
-            profile = profile_form.save(owner=request.user)
-            source = profile_form.connected_source
-
-            messages.success(
-                request,
-                f"Monitoring profile created. Telegram source #{source.id} is active.",
+            profile_create_limit = check_rate_limit(
+                name="registered-profile-create",
+                actor=request.user.id,
+                limit=settings.REGISTERED_PROFILE_CREATE_LIMIT_PER_DAY,
+                period=RateLimitPeriod.DAY,
             )
 
-            return redirect("profile_detail", profile_id=profile.id)
+            if not profile_create_limit.allowed:
+                profile_form.add_error(
+                    None,
+                    (
+                        "Profile creation limit reached. "
+                        "Please try again later."
+                    ),
+                )
+            else:
+                profile = profile_form.save(owner=request.user)
+                source = profile_form.connected_source
+
+                messages.success(
+                    request,
+                    (
+                        "Monitoring profile created. "
+                        f"Telegram source #{source.id} is active."
+                    ),
+                )
+
+                return redirect("profile_detail", profile_id=profile.id)
     else:
         profile_form = MonitoringProfileCreateForm()
 
@@ -555,6 +576,22 @@ def profile_update_view(request, profile_id: int):
 def event_action_view(request, event_id, action: str):
     """Change event status from the UI with strict owner isolation."""
 
+    action_limit = check_rate_limit(
+        name="registered-event-action",
+        actor=request.user.id,
+        limit=settings.REGISTERED_EVENT_ACTION_LIMIT_PER_MINUTE,
+        period=RateLimitPeriod.MINUTE,
+    )
+
+    next_url = request.POST.get("next") or reverse("dashboard")
+
+    if not action_limit.allowed:
+        messages.error(
+            request,
+            "Too many event actions. Please try again shortly.",
+        )
+        return redirect(next_url)
+
     event = (
         Event.objects.select_related("profile")
         .filter(
@@ -580,10 +617,5 @@ def event_action_view(request, event_id, action: str):
         event.mark_archived()
     else:
         raise Http404("Unsupported event action.")
-
-    next_url = request.POST.get("next") or reverse(
-        "profile_detail",
-        kwargs={"profile_id": event.profile_id},
-    )
 
     return redirect(next_url)

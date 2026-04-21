@@ -1,15 +1,14 @@
 import json
 import logging
 
+from django.conf import settings
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-
+from apps.core.services.rate_limits import RateLimitPeriod, check_rate_limit
 from apps.integrations.models import ConnectedSource
 from apps.integrations.services.telegram_bot import handle_telegram_webhook_update
-
-
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +34,62 @@ def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonRespo
                 "error": "not_found",
             },
             status=404,
+        )
+
+    source_limit = check_rate_limit(
+        name="telegram-source-webhook",
+        actor=source.id,
+        limit=settings.TELEGRAM_SOURCE_WEBHOOK_LIMIT_PER_MINUTE,
+        period=RateLimitPeriod.MINUTE,
+    )
+
+    if not source_limit.allowed:
+        logger.warning(
+            "telegram_webhook_rate_limited_source",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+                "limit": source_limit.limit,
+                "current": source_limit.current,
+                "retry_after_seconds": source_limit.retry_after_seconds,
+            },
+        )
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "rate_limited",
+                "scope": "source",
+                "retry_after_seconds": source_limit.retry_after_seconds,
+            },
+            status=429,
+        )
+
+    profile_limit = check_rate_limit(
+        name="telegram-profile-webhook",
+        actor=source.profile_id,
+        limit=settings.TELEGRAM_PROFILE_WEBHOOK_LIMIT_PER_DAY,
+        period=RateLimitPeriod.DAY,
+    )
+
+    if not profile_limit.allowed:
+        logger.warning(
+            "telegram_webhook_rate_limited_profile",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+                "limit": profile_limit.limit,
+                "current": profile_limit.current,
+                "retry_after_seconds": profile_limit.retry_after_seconds,
+            },
+        )
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "rate_limited",
+                "scope": "profile",
+                "retry_after_seconds": profile_limit.retry_after_seconds,
+            },
+            status=429,
         )
 
     try:
