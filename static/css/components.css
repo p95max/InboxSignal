@@ -122,9 +122,9 @@
 .profile-card-actions {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 8px;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
 }
 
 .profile-card-actions .button {
@@ -326,4 +326,32 @@
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 18px;
+}
+
+.profile-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 190px;
+}
+
+.profile-card-title {
+    min-width: 0;
+    flex: 1;
+}
+
+.profile-name {
+    display: inline-block;
+    max-width: 100%;
+    color: var(--text-strong);
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+}
+
+.profile-card-actions-bottom {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
 }
