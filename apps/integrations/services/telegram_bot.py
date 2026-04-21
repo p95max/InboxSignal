@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone as dt_timezone
 from typing import Any
 
+from apps.alerts.services.telegram_delivery import telegram_send_message
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.models import IncomingMessage
 from apps.monitoring.services.ingestion import IngestIncomingMessageResult, ingest_incoming_message
@@ -72,6 +73,47 @@ def handle_telegram_webhook_update(
         received_at=parsed_message.received_at,
         enqueue_processing=enqueue_processing,
     )
+
+    if result.created and parsed_message.text.strip() == "/start":
+        metadata = source.metadata or {}
+
+        if not str(metadata.get("alert_chat_id", "")).strip():
+            metadata["alert_chat_id"] = parsed_message.external_chat_id
+            source.metadata = metadata
+            source.save(update_fields=["metadata", "updated_at"])
+
+            logger.info(
+                "telegram_alert_chat_auto_bound",
+                extra={
+                    "source_id": source.id,
+                    "profile_id": source.profile_id,
+                    "chat_id": parsed_message.external_chat_id,
+                    "message_id": str(result.message.id),
+                },
+            )
+
+            try:
+                bot_token = source.get_credentials()
+
+                if bot_token:
+                    telegram_send_message(
+                        bot_token=bot_token,
+                        chat_id=parsed_message.external_chat_id,
+                        text=(
+                            "✅ Alerts have been enabled for this chat.\n\n"
+                            "Future monitoring alerts will be sent here."
+                        ),
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "telegram_alert_chat_auto_bound_confirmation_failed",
+                    extra={
+                        "source_id": source.id,
+                        "profile_id": source.profile_id,
+                        "chat_id": parsed_message.external_chat_id,
+                        "error": str(exc)[:1000],
+                    },
+                )
 
     logger.info(
         "telegram_webhook_update_ingested",
