@@ -83,25 +83,41 @@ def build_telegram_alert_text(alert: AlertDelivery) -> str:
         else:
             contact_label = (
                 incoming_message.sender_display_name
-                or (f"@{incoming_message.sender_username}" if incoming_message.sender_username else "")
+                or (
+                    f"@{incoming_message.sender_username}"
+                    if incoming_message.sender_username
+                    else ""
+                )
                 or incoming_message.sender_id
                 or incoming_message.external_chat_id
                 or "Unknown contact"
             )
 
     message_preview = (event.message_text_snapshot or "").strip()
+
     if len(message_preview) > 180:
         message_preview = f"{message_preview[:180].rstrip()}..."
 
-    title = f"{event.priority.upper()} {event.category}"
+    title = event.title or f"{event.priority.title()} {event.category.title()}"
 
     parts = [
-        f"🚨 {title}",
+        "New monitoring alert",
         "",
+        f"Title: {title}",
         f"Profile: {event.profile.name}",
         f"From: {contact_label}",
+        f"Category: {event.category}",
+        f"Priority: {event.priority}",
         f"Score: {event.priority_score}",
     ]
+
+    if event.summary:
+        parts.extend(
+            [
+                "",
+                f"Summary: {event.summary}",
+            ]
+        )
 
     if message_preview:
         parts.extend(

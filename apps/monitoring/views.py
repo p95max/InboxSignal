@@ -6,13 +6,33 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from urllib.parse import urlencode
+from django.contrib import messages
+
+from apps.integrations.models import ConnectedSource
+from apps.monitoring.forms import MonitoringProfileCreateForm
 
 from apps.monitoring.models import Event, MonitoringProfile
 
 
 @login_required
 def dashboard_view(request):
-    """Show a minimal monitoring dashboard for the current user."""
+    """Show dashboard and allow creating a monitoring profile."""
+
+    if request.method == "POST":
+        profile_form = MonitoringProfileCreateForm(request.POST)
+
+        if profile_form.is_valid():
+            profile = profile_form.save(owner=request.user)
+            source = profile_form.connected_source
+
+            messages.success(
+                request,
+                f"Monitoring profile created. Telegram source #{source.id} is active.",
+            )
+
+            return redirect("profile_detail", profile_id=profile.id)
+    else:
+        profile_form = MonitoringProfileCreateForm()
 
     today_start = timezone.localtime(timezone.now()).replace(
         hour=0,
@@ -61,6 +81,23 @@ def dashboard_view(request):
                 filter=Q(events__status=Event.Status.ARCHIVED),
                 distinct=True,
             ),
+            telegram_sources_count=Count(
+                "connected_sources",
+                filter=Q(
+                    connected_sources__source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+                    connected_sources__is_deleted=False,
+                ),
+                distinct=True,
+            ),
+            active_telegram_sources_count=Count(
+                "connected_sources",
+                filter=Q(
+                    connected_sources__source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+                    connected_sources__status=ConnectedSource.Status.ACTIVE,
+                    connected_sources__is_deleted=False,
+                ),
+                distinct=True,
+            ),
         )
         .order_by("-last_event_at", "-updated_at")
     )
@@ -71,6 +108,7 @@ def dashboard_view(request):
         {
             "stats": stats,
             "profiles": profiles,
+            "profile_form": profile_form,
         },
     )
 
@@ -104,6 +142,7 @@ def profile_detail_view(request, profile_id: int):
         raise Http404("Monitoring profile was not found.")
 
     selected_priority = request.GET.get("priority", "")
+    status_filter_was_provided = "status" in request.GET
     selected_status = request.GET.get("status", "")
     selected_category = request.GET.get("category", "")
     selected_archive_decision = request.GET.get("decision", "")
@@ -129,9 +168,12 @@ def profile_detail_view(request, profile_id: int):
 
     if selected_status in valid_statuses:
         events = events.filter(status=selected_status)
-    else:
+    elif status_filter_was_provided:
         selected_status = ""
         events = events.exclude(status=Event.Status.ARCHIVED)
+    else:
+        selected_status = Event.Status.NEW
+        events = events.filter(status=Event.Status.NEW)
 
     if selected_category in valid_categories:
         events = events.filter(category=selected_category)
@@ -153,8 +195,10 @@ def profile_detail_view(request, profile_id: int):
 
     if selected_status in valid_statuses:
         counter_events = counter_events.filter(status=selected_status)
-    else:
+    elif status_filter_was_provided:
         counter_events = counter_events.exclude(status=Event.Status.ARCHIVED)
+    else:
+        counter_events = counter_events.filter(status=Event.Status.NEW)
 
     if selected_priority in valid_priorities:
         counter_events = counter_events.filter(priority=selected_priority)
@@ -183,6 +227,8 @@ def profile_detail_view(request, profile_id: int):
 
         if selected_status:
             query_params["status"] = selected_status
+        elif status_filter_was_provided:
+            query_params["status"] = ""
 
         if selected_archive_decision:
             query_params["decision"] = selected_archive_decision
@@ -196,8 +242,11 @@ def profile_detail_view(request, profile_id: int):
             kwargs={"profile_id": profile.id},
         )
 
-        if not query_string:
+        if not query_string and not status_filter_was_provided:
             return base_url
+
+        if not query_string and status_filter_was_provided:
+            return f"{base_url}?status="
 
         return f"{base_url}?{query_string}"
 
@@ -253,10 +302,10 @@ def profile_detail_view(request, profile_id: int):
     ]
 
     def build_filter_url(
-            *,
-            priority: str | None = None,
-            status: str | None = None,
-            category: str | None = None,
+        *,
+        priority: str | None = None,
+        status: str | None = None,
+        category: str | None = None,
     ) -> str:
         query_params = {}
 
@@ -269,6 +318,8 @@ def profile_detail_view(request, profile_id: int):
 
         if next_status:
             query_params["status"] = next_status
+        elif status == "":
+            query_params["status"] = ""
 
         if next_category:
             query_params["category"] = next_category
@@ -279,8 +330,11 @@ def profile_detail_view(request, profile_id: int):
             kwargs={"profile_id": profile.id},
         )
 
-        if not query_string:
+        if not query_string and status != "":
             return base_url
+
+        if not query_string and status == "":
+            return f"{base_url}?status="
 
         return f"{base_url}?{query_string}"
 

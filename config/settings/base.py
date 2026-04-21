@@ -115,7 +115,6 @@ LOGGING = {
 AUTH_USER_MODEL = "accounts.User"
 
 FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="")
-TELEGRAM_BOT_WEBHOOK_SECRET = env("TELEGRAM_BOT_WEBHOOK_SECRET", default="")
 
 AI_ENABLED = env.bool("AI_ENABLED", default=False)
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")

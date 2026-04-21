@@ -100,17 +100,25 @@ def create_alert_delivery_for_event(event: Event) -> AlertDelivery | None:
 
 
 def get_default_recipient(event: Event) -> str:
-    """Return internal alert recipient for MVP alert delivery."""
+    """Return Telegram alert recipient for MVP alert delivery.
+
+    Prefer explicit alert_chat_id from ConnectedSource metadata.
+    Fall back to incoming Telegram chat id for directly ingested/test messages.
+    """
 
     message = event.incoming_message
 
-    if message is None or message.source is None:
+    if message is None:
         return ""
 
-    metadata = message.source.metadata or {}
-    alert_chat_id = metadata.get("alert_chat_id", "")
+    if message.source:
+        metadata = message.source.metadata or {}
+        alert_chat_id = str(metadata.get("alert_chat_id", "")).strip()
 
-    return str(alert_chat_id).strip()
+        if alert_chat_id:
+            return alert_chat_id
+
+    return str(message.external_chat_id or "").strip()
 
 
 def build_alert_payload(event: Event) -> dict:

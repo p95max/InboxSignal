@@ -31,35 +31,144 @@
 </section>
 
 <section class="section">
+    <div class="card">
+        <div class="panel-header">
+            <div>
+                <h2 class="section-title">Create monitoring profile</h2>
+                <p class="muted">
+                    Add a monitoring profile and connect a Telegram bot.
+                    The bot token is encrypted and never shown again.
+                </p>
+            </div>
+        </div>
+
+        <form method="post" class="profile-create-form">
+            {% csrf_token %}
+
+            {% if profile_form.non_field_errors %}
+                <div class="form-error">
+                    {{ profile_form.non_field_errors|striptags }}
+                </div>
+            {% endif %}
+
+            <div class="form-grid">
+                <div class="field">
+                    {{ profile_form.name.label_tag }}
+                    {{ profile_form.name }}
+                    {% if profile_form.name.errors %}
+                        <div class="form-error">{{ profile_form.name.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    {{ profile_form.scenario.label_tag }}
+                    {{ profile_form.scenario }}
+                    {% if profile_form.scenario.errors %}
+                        <div class="form-error">{{ profile_form.scenario.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="field form-grid-full">
+                    {{ profile_form.business_context.label_tag }}
+                    {{ profile_form.business_context }}
+                    {% if profile_form.business_context.errors %}
+                        <div class="form-error">{{ profile_form.business_context.errors|striptags }}</div>
+                    {% endif %}
+                    <div class="muted">Recommended for better AI/rule accuracy. Max 300 characters.</div>
+                </div>
+
+                <div class="field">
+                    {{ profile_form.telegram_bot_token.label_tag }}
+                    {{ profile_form.telegram_bot_token }}
+                    {% if profile_form.telegram_bot_token.errors %}
+                        <div class="form-error">{{ profile_form.telegram_bot_token.errors|striptags }}</div>
+                    {% endif %}
+                    <div class="muted">{{ profile_form.telegram_bot_token.help_text }}</div>
+                </div>
+
+                <div class="field">
+                    {{ profile_form.alert_chat_id.label_tag }}
+                    {{ profile_form.alert_chat_id }}
+                    {% if profile_form.alert_chat_id.errors %}
+                        <div class="form-error">{{ profile_form.alert_chat_id.errors|striptags }}</div>
+                    {% endif %}
+                    <div class="muted">{{ profile_form.alert_chat_id.help_text }}</div>
+                </div>
+            </div>
+
+            <div class="checkbox-grid">
+                <label class="checkbox-row">
+                    {{ profile_form.track_leads }}
+                    <span>{{ profile_form.track_leads.label }}</span>
+                </label>
+
+                <label class="checkbox-row">
+                    {{ profile_form.track_complaints }}
+                    <span>{{ profile_form.track_complaints.label }}</span>
+                </label>
+
+                <label class="checkbox-row">
+                    {{ profile_form.track_requests }}
+                    <span>{{ profile_form.track_requests.label }}</span>
+                </label>
+
+                <label class="checkbox-row">
+                    {{ profile_form.track_urgent }}
+                    <span>{{ profile_form.track_urgent.label }}</span>
+                </label>
+
+                <label class="checkbox-row">
+                    {{ profile_form.track_general_activity }}
+                    <span>{{ profile_form.track_general_activity.label }}</span>
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button class="button button-primary" type="submit">
+                    Create profile
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="section">
     <h2 class="section-title">Monitoring profiles</h2>
 
     {% if profiles %}
         <div class="grid grid-2">
             {% for profile in profiles %}
                 <article class="card profile-card">
-
                     <div class="profile-card-header">
-    <div class="profile-card-title">
-        <a class="profile-name" href="{% url 'profile_detail' profile.id %}">
-            {{ profile.name }}
-        </a>
-        <div class="muted">
-            {{ profile.get_scenario_display }} · {{ profile.get_status_display }}
-        </div>
-    </div>
+                        <div class="profile-card-title">
+                            <a class="profile-name" href="{% url 'profile_detail' profile.id %}">
+                                {{ profile.name }}
+                            </a>
+                            <div class="muted">
+                                {{ profile.get_scenario_display }} · {{ profile.get_status_display }}
+                            </div>
+                        </div>
 
-    <div class="profile-card-actions">
-        <a class="button button-primary" href="{% url 'profile_detail' profile.id %}">
-            View events
-        </a>
+                        <div class="profile-card-actions">
+                            <a class="button button-primary" href="{% url 'profile_detail' profile.id %}">
+                                View events
+                            </a>
 
-        <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
-            Archive
-        </a>
-    </div>
-</div>
+                            <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
+                                Archive
+                            </a>
+                        </div>
+                    </div>
 
                     <div class="badge-row">
+                        {% if profile.active_telegram_sources_count %}
+                            <span class="badge badge-success">Telegram connected</span>
+                        {% elif profile.telegram_sources_count %}
+                            <span class="badge badge-warning">Telegram inactive</span>
+                        {% else %}
+                            <span class="badge badge-muted">No Telegram source</span>
+                        {% endif %}
+
                         <span class="badge badge-danger">Urgent open: {{ profile.urgent_open_events_count }}</span>
                         <span class="badge badge-warning">Important open: {{ profile.important_open_events_count }}</span>
                         <span class="badge">Open: {{ profile.open_events_count }}</span>
@@ -80,7 +189,7 @@
         </div>
     {% else %}
         <div class="card empty-state">
-            No monitoring profiles yet. Create one in Django admin for now.
+            No monitoring profiles yet. Create the first one above.
         </div>
     {% endif %}
 </section>
