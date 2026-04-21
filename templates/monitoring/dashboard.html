@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load tz %}
 
 {% block title %}Dashboard | Messaging Monitoring{% endblock %}
 
@@ -78,7 +79,7 @@
         <div class="muted">
             Last event:
             {% if profile.last_event_at %}
-                {{ profile.last_event_at|date:"Y-m-d H:i" }}
+                {{ profile.last_event_at|localtime|date:"Y-m-d H:i" }}
             {% else %}
                 no events yet
             {% endif %}

@@ -147,3 +147,6 @@ CACHES = {
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "login"
+
+TIME_ZONE = "Europe/Berlin"
+USE_TZ = True
