@@ -3,9 +3,19 @@
 {% block title %}Dashboard | Messaging Monitoring{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Dashboard</h1>
-    <p>Events that need attention across your monitoring profiles.</p>
+<div class="page-header page-header-with-actions">
+    <div>
+        <h1>Dashboard</h1>
+        <p>Events that need attention across your monitoring profiles.</p>
+    </div>
+
+    <button
+        type="button"
+        class="button button-primary"
+        onclick="document.getElementById('profile-create-modal').showModal()"
+    >
+        Add monitoring profile
+    </button>
 </div>
 
 <section class="grid grid-4">
@@ -27,108 +37,6 @@
     <div class="card">
         <div class="stat-value">{{ stats.open_total }}</div>
         <div class="stat-label">Open events</div>
-    </div>
-</section>
-
-<section class="section">
-    <div class="card">
-        <div class="panel-header">
-            <div>
-                <h2 class="section-title">Create monitoring profile</h2>
-                <p class="muted">
-                    Add a monitoring profile and connect a Telegram bot.
-                    The bot token is encrypted and never shown again.
-                </p>
-            </div>
-        </div>
-
-        <form method="post" class="profile-create-form">
-            {% csrf_token %}
-
-            {% if profile_form.non_field_errors %}
-                <div class="form-error">
-                    {{ profile_form.non_field_errors|striptags }}
-                </div>
-            {% endif %}
-
-            <div class="form-grid">
-                <div class="field">
-                    {{ profile_form.name.label_tag }}
-                    {{ profile_form.name }}
-                    {% if profile_form.name.errors %}
-                        <div class="form-error">{{ profile_form.name.errors|striptags }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="field">
-                    {{ profile_form.scenario.label_tag }}
-                    {{ profile_form.scenario }}
-                    {% if profile_form.scenario.errors %}
-                        <div class="form-error">{{ profile_form.scenario.errors|striptags }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="field form-grid-full">
-                    {{ profile_form.business_context.label_tag }}
-                    {{ profile_form.business_context }}
-                    {% if profile_form.business_context.errors %}
-                        <div class="form-error">{{ profile_form.business_context.errors|striptags }}</div>
-                    {% endif %}
-                    <div class="muted">Recommended for better AI/rule accuracy. Max 300 characters.</div>
-                </div>
-
-                <div class="field">
-                    {{ profile_form.telegram_bot_token.label_tag }}
-                    {{ profile_form.telegram_bot_token }}
-                    {% if profile_form.telegram_bot_token.errors %}
-                        <div class="form-error">{{ profile_form.telegram_bot_token.errors|striptags }}</div>
-                    {% endif %}
-                    <div class="muted">{{ profile_form.telegram_bot_token.help_text }}</div>
-                </div>
-
-                <div class="field">
-                    {{ profile_form.alert_chat_id.label_tag }}
-                    {{ profile_form.alert_chat_id }}
-                    {% if profile_form.alert_chat_id.errors %}
-                        <div class="form-error">{{ profile_form.alert_chat_id.errors|striptags }}</div>
-                    {% endif %}
-                    <div class="muted">{{ profile_form.alert_chat_id.help_text }}</div>
-                </div>
-            </div>
-
-            <div class="checkbox-grid">
-                <label class="checkbox-row">
-                    {{ profile_form.track_leads }}
-                    <span>{{ profile_form.track_leads.label }}</span>
-                </label>
-
-                <label class="checkbox-row">
-                    {{ profile_form.track_complaints }}
-                    <span>{{ profile_form.track_complaints.label }}</span>
-                </label>
-
-                <label class="checkbox-row">
-                    {{ profile_form.track_requests }}
-                    <span>{{ profile_form.track_requests.label }}</span>
-                </label>
-
-                <label class="checkbox-row">
-                    {{ profile_form.track_urgent }}
-                    <span>{{ profile_form.track_urgent.label }}</span>
-                </label>
-
-                <label class="checkbox-row">
-                    {{ profile_form.track_general_activity }}
-                    <span>{{ profile_form.track_general_activity.label }}</span>
-                </label>
-            </div>
-
-            <div class="form-actions">
-                <button class="button button-primary" type="submit">
-                    Create profile
-                </button>
-            </div>
-        </form>
     </div>
 </section>
 
@@ -157,6 +65,18 @@
                             <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
                                 Archive
                             </a>
+
+                            <form
+                                method="post"
+                                action="{% url 'profile_delete' profile.id %}"
+                                class="inline-form"
+                                onsubmit="return confirm('Delete monitoring profile {{ profile.name|escapejs }}? This will delete related sources, messages, events and alerts.');"
+                            >
+                                {% csrf_token %}
+                                <button class="button button-danger" type="submit">
+                                    Delete
+                                </button>
+                            </form>
                         </div>
                     </div>
 
@@ -189,8 +109,18 @@
         </div>
     {% else %}
         <div class="card empty-state">
-            No monitoring profiles yet. Create the first one above.
+            <p>No monitoring profiles yet.</p>
+            <button
+                type="button"
+                class="button button-primary"
+                onclick="document.getElementById('profile-create-modal').showModal()"
+            >
+                Create first profile
+            </button>
         </div>
     {% endif %}
 </section>
+
+{% include "includes/_profile_create_modal.html" %}
+
 {% endblock %}

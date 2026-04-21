@@ -109,6 +109,7 @@ def dashboard_view(request):
             "stats": stats,
             "profiles": profiles,
             "profile_form": profile_form,
+            "open_profile_modal": request.method == "POST" and profile_form.errors,
         },
     )
 
@@ -465,6 +466,33 @@ def profile_detail_view(request, profile_id: int):
             "status_filter_options": status_filter_options,
         },
     )
+
+
+@login_required
+@require_POST
+def profile_delete_view(request, profile_id: int):
+    """Delete a monitoring profile owned by the current user."""
+
+    profile = (
+        MonitoringProfile.objects.filter(
+            id=profile_id,
+            owner=request.user,
+        )
+        .first()
+    )
+
+    if profile is None:
+        raise Http404("Monitoring profile was not found.")
+
+    profile_name = profile.name
+    profile.delete()
+
+    messages.success(
+        request,
+        f'Monitoring profile "{profile_name}" was deleted.',
+    )
+
+    return redirect("dashboard")
 
 
 @login_required

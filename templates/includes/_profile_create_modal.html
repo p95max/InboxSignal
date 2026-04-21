@@ -1,0 +1,124 @@
+<dialog
+    id="profile-create-modal"
+    class="app-modal"
+    {% if open_profile_modal %}open{% endif %}
+>
+    <div class="app-modal-card">
+        <div class="app-modal-header">
+            <div>
+                <h2 class="section-title">Create monitoring profile</h2>
+                <p class="muted">
+                    Add a monitoring profile and connect a Telegram bot.
+                    The bot token is encrypted and never shown again.
+                </p>
+            </div>
+
+            <button
+                type="button"
+                class="button button-icon"
+                aria-label="Close"
+                onclick="document.getElementById('profile-create-modal').close()"
+            >
+                ×
+            </button>
+        </div>
+
+        <form method="post" class="profile-create-form">
+            {% csrf_token %}
+
+            {% if profile_form.non_field_errors %}
+                <div class="form-error">
+                    {{ profile_form.non_field_errors|striptags }}
+                </div>
+            {% endif %}
+
+            <div class="form-grid">
+                <div class="field">
+                    {{ profile_form.name.label_tag }}
+                    {{ profile_form.name }}
+                    {% if profile_form.name.errors %}
+                        <div class="form-error">{{ profile_form.name.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    {{ profile_form.scenario.label_tag }}
+                    {{ profile_form.scenario }}
+                    {% if profile_form.scenario.errors %}
+                        <div class="form-error">{{ profile_form.scenario.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="field form-grid-full">
+                    {{ profile_form.business_context.label_tag }}
+                    {{ profile_form.business_context }}
+                    {% if profile_form.business_context.errors %}
+                        <div class="form-error">{{ profile_form.business_context.errors|striptags }}</div>
+                    {% endif %}
+                    <div class="muted">
+                        Recommended for better AI/rule accuracy. Max 300 characters.
+                    </div>
+                </div>
+
+                <div class="field">
+                    {{ profile_form.telegram_bot_token.label_tag }}
+                    {{ profile_form.telegram_bot_token }}
+                    {% if profile_form.telegram_bot_token.errors %}
+                        <div class="form-error">{{ profile_form.telegram_bot_token.errors|striptags }}</div>
+                    {% endif %}
+                    <div class="muted">{{ profile_form.telegram_bot_token.help_text }}</div>
+                </div>
+
+                <div class="field">
+                    {{ profile_form.alert_chat_id.label_tag }}
+                    {{ profile_form.alert_chat_id }}
+                    {% if profile_form.alert_chat_id.errors %}
+                        <div class="form-error">{{ profile_form.alert_chat_id.errors|striptags }}</div>
+                    {% endif %}
+                    <div class="muted">{{ profile_form.alert_chat_id.help_text }}</div>
+                </div>
+            </div>
+
+            <div class="checkbox-grid">
+                <label class="checkbox-row">
+                    {{ profile_form.track_leads }}
+                    <span>{{ profile_form.track_leads.label }}</span>
+                </label>
+
+                <label class="checkbox-row">
+                    {{ profile_form.track_complaints }}
+                    <span>{{ profile_form.track_complaints.label }}</span>
+                </label>
+
+                <label class="checkbox-row">
+                    {{ profile_form.track_requests }}
+                    <span>{{ profile_form.track_requests.label }}</span>
+                </label>
+
+                <label class="checkbox-row">
+                    {{ profile_form.track_urgent }}
+                    <span>{{ profile_form.track_urgent.label }}</span>
+                </label>
+
+                <label class="checkbox-row">
+                    {{ profile_form.track_general_activity }}
+                    <span>{{ profile_form.track_general_activity.label }}</span>
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button
+                    type="button"
+                    class="button"
+                    onclick="document.getElementById('profile-create-modal').close()"
+                >
+                    Cancel
+                </button>
+
+                <button class="button button-primary" type="submit">
+                    Create profile
+                </button>
+            </div>
+        </form>
+    </div>
+</dialog>
