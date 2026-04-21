@@ -101,14 +101,14 @@ def build_telegram_alert_text(alert: AlertDelivery) -> str:
     title = event.title or f"{event.priority.title()} {event.category.title()}"
 
     parts = [
-        "New monitoring alert",
+        "🚨 New monitoring alert",
         "",
-        f"Title: {title}",
-        f"Profile: {event.profile.name}",
-        f"From: {contact_label}",
-        f"Category: {event.category}",
-        f"Priority: {event.priority}",
-        f"Score: {event.priority_score}",
+        f"📌 Title: {title}",
+        f"🗂 Profile: {event.profile.name}",
+        f"👤 From: {contact_label}",
+        f"🏷 Category: {event.category}",
+        f"⚡ Priority: {event.priority}",
+        f"📊 Score: {event.priority_score}",
     ]
 
     if event.summary:
