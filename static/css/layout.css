@@ -1,0 +1,142 @@
+/* =========================
+   3. Layout
+   ========================= */
+
+.layout {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 24px 48px;
+}
+
+.grid {
+    display: grid;
+    gap: 16px;
+}
+
+.grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.section {
+    margin-top: 30px;
+}
+
+.section-title {
+    margin: 0 0 14px;
+    color: var(--text-strong);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+}
+
+/* =========================
+   4. Topbar
+   ========================= */
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(11, 16, 32, 0.78);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(18px);
+}
+
+.topbar-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-strong);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.brand::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--primary), var(--success));
+    box-shadow: 0 0 24px rgba(79, 140, 255, 0.75);
+}
+
+.brand:hover {
+    color: var(--text-strong);
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.logout-form {
+    margin: 0;
+}
+
+
+/* =========================
+   6. Page header
+   ========================= */
+
+.page-header {
+    margin-bottom: 26px;
+}
+
+.page-header h1 {
+    margin: 0 0 8px;
+    color: var(--text-strong);
+    font-size: clamp(28px, 4vw, 42px);
+    line-height: 1.05;
+    font-weight: 850;
+    letter-spacing: -0.045em;
+}
+
+.page-header p {
+    max-width: 780px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 15px;
+}
+
+.page-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+}
+
+.page-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+
+/* =========================
+   Header variants
+   ========================= */
+
+.page-header-with-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}

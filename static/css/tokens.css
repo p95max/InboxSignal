@@ -1,0 +1,38 @@
+/* =========================
+   1. Design tokens
+   ========================= */
+
+:root {
+    --bg: #0b1020;
+    --bg-soft: #11182b;
+    --card: #151d31;
+    --card-hover: #19233a;
+    --text: #e8edf7;
+    --text-strong: #ffffff;
+    --muted: #93a4bd;
+    --muted-soft: #65748b;
+    --border: rgba(148, 163, 184, 0.18);
+
+    --primary: #4f8cff;
+    --primary-hover: #6ea2ff;
+    --primary-soft: rgba(79, 140, 255, 0.14);
+
+    --danger: #ff5c7a;
+    --danger-soft: rgba(255, 92, 122, 0.14);
+
+    --warning: #f6c453;
+    --warning-soft: rgba(246, 196, 83, 0.14);
+
+    --success: #3ddc97;
+    --success-soft: rgba(61, 220, 151, 0.14);
+
+    --info: #38bdf8;
+    --info-soft: rgba(56, 189, 248, 0.14);
+
+    --shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+    --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.22);
+
+    --radius-lg: 22px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+}

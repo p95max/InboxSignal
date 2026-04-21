@@ -1,0 +1,153 @@
+/* =========================
+   17. Responsive
+   ========================= */
+
+@media (max-width: 1100px) {
+    .category-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 780px) {
+    .layout {
+        padding: 22px 16px 40px;
+    }
+
+    .grid-4,
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .category-stats,
+    .archive-decision-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .topbar-inner,
+    .page-header-row,
+    .event-header,
+    .profile-card-header,
+    .panel-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nav-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .page-actions,
+    .profile-card-actions,
+    .filter-actions {
+        width: 100%;
+    }
+
+    .profile-card-actions {
+        justify-content: flex-start;
+    }
+
+    .filters {
+        align-items: stretch;
+    }
+
+    .field,
+    select,
+    input,
+    textarea,
+    .form-control,
+    .form-select {
+        width: 100%;
+    }
+
+    .button,
+    button,
+    .btn,
+    .page-actions .button,
+    .profile-card-actions .button,
+    .filter-actions .button-primary {
+        width: 100%;
+    }
+
+    .event-actions form {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .topbar-inner {
+        padding: 14px 16px;
+    }
+
+    .page-header h1 {
+        font-size: 30px;
+    }
+
+    .card {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .stat-value,
+    .category-stat-value,
+    .archive-decision-value {
+        font-size: 30px;
+    }
+
+    .category-stats,
+    .archive-decision-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+@media (max-width: 780px) {
+    .filter-button-groups {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-pill {
+        flex: 1;
+    }
+}
+
+
+@media (max-width: 760px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+@media (max-width: 760px) {
+    .page-header-with-actions,
+    .profile-card-header,
+    .profile-card-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .profile-card-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .inline-form,
+    .inline-form .button {
+        width: 100%;
+    }
+}
+
+
+@media (max-width: 760px) {
+    .checkbox-grid {
+        grid-template-columns: 1fr;
+    }
+}
+

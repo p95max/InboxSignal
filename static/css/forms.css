@@ -1,0 +1,266 @@
+/* =========================
+   8. Forms and filters
+   ========================= */
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.field label {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+select,
+input,
+textarea,
+.form-control,
+.form-select {
+    min-width: 160px;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background-color: rgba(255, 255, 255, 0.045);
+    color: var(--text);
+    outline: none;
+    font: inherit;
+    transition:
+        border-color 0.15s ease,
+        background 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+select:hover,
+input:hover,
+textarea:hover,
+.form-control:hover,
+.form-select:hover {
+    border-color: rgba(148, 163, 184, 0.34);
+}
+
+select:focus,
+input:focus,
+textarea:focus,
+.form-control:focus,
+.form-select:focus {
+    border-color: rgba(79, 140, 255, 0.75);
+    background-color: rgba(255, 255, 255, 0.07);
+    color: var(--text);
+    box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.14);
+}
+
+select option {
+    background: #11182b;
+    color: var(--text);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--muted-soft);
+}
+
+.helptext {
+    color: var(--muted-soft);
+    font-size: 13px;
+}
+
+.errorlist {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    list-style: none;
+    border: 1px solid rgba(255, 92, 122, 0.28);
+    border-radius: var(--radius-md);
+    background: var(--danger-soft);
+    color: #ff9caf;
+}
+
+
+/* =========================
+   Filter button groups
+   ========================= */
+
+.filter-section {
+    margin-bottom: 18px;
+}
+
+.filter-section-header {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 10px;
+}
+
+.filter-section-title {
+    color: var(--text-strong);
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.filter-section-description {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.filter-button-groups {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.filter-button-group {
+    min-width: 0;
+}
+
+.filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.filter-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 700;
+    transition:
+        transform 0.12s ease,
+        border-color 0.15s ease,
+        background 0.15s ease,
+        color 0.15s ease;
+}
+
+.filter-pill:hover {
+    transform: translateY(-1px);
+    border-color: rgba(79, 140, 255, 0.45);
+    background: rgba(79, 140, 255, 0.10);
+    color: var(--text-strong);
+}
+
+.filter-pill.is-active {
+    border-color: rgba(79, 140, 255, 0.75);
+    background: var(--primary-soft);
+    color: #aac7ff;
+}
+
+
+/* =========================
+   Profile create form
+   ========================= */
+
+.profile-create-form {
+    display: grid;
+    gap: 18px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.form-grid-full {
+    grid-column: 1 / -1;
+}
+
+.form-control {
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+    font: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.form-error {
+    margin-top: 6px;
+    color: var(--danger);
+    font-size: 13px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* =========================
+   Checkbox controls
+   ========================= */
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-row input[type="checkbox"] {
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 16px;
+    border-radius: 4px;
+    accent-color: var(--primary);
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.checkbox-row span {
+    min-width: 0;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.25;
+}
+
+.checkbox-row:hover {
+    border-color: rgba(79, 140, 255, 0.42);
+    background: rgba(79, 140, 255, 0.08);
+}
+
+.checkbox-row:has(input[type="checkbox"]:checked) {
+    border-color: rgba(79, 140, 255, 0.65);
+    background: var(--primary-soft);
+}
+
