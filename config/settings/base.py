@@ -1,4 +1,5 @@
 from pathlib import Path
+from decimal import Decimal
 
 import environ
 
@@ -123,6 +124,27 @@ AI_PROMPT_VERSION = env("AI_PROMPT_VERSION", default="ai_v1")
 AI_REQUEST_TIMEOUT = env.float("AI_REQUEST_TIMEOUT", default=20.0)
 AI_MIN_TEXT_LENGTH = env.int("AI_MIN_TEXT_LENGTH", default=12)
 
+AI_DAILY_CALL_LIMIT_PER_USER = env.int(
+    "AI_DAILY_CALL_LIMIT_PER_USER",
+    default=50,
+)
+AI_DAILY_CALL_LIMIT_PER_PROFILE = env.int(
+    "AI_DAILY_CALL_LIMIT_PER_PROFILE",
+    default=20,
+)
+AI_DAILY_COST_LIMIT_USD_PER_USER = Decimal(
+    env("AI_DAILY_COST_LIMIT_USD_PER_USER", default="1.00")
+)
+
+# Default values for gpt-4o-mini text tokens.
+# Keep them configurable because provider pricing can change.
+AI_INPUT_COST_PER_1M_TOKENS = Decimal(
+    env("AI_INPUT_COST_PER_1M_TOKENS", default="0.15")
+)
+AI_OUTPUT_COST_PER_1M_TOKENS = Decimal(
+    env("AI_OUTPUT_COST_PER_1M_TOKENS", default="0.60")
+)
+
 ALERT_COOLDOWN_URGENT_SECONDS = env.int(
     "ALERT_COOLDOWN_URGENT_SECONDS",
     default=0,
@@ -137,7 +159,7 @@ REDIS_CACHE_URL = env("REDIS_CACHE_URL", default="redis://redis:6379/2")
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_CACHE_URL,
+        "LOCATION": env("REDIS_CACHE_URL", default="redis://redis:6379/2"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },

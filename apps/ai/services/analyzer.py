@@ -9,6 +9,12 @@ from apps.ai.services.parser import parse_ai_analysis_response
 from apps.ai.services.prompts import build_ai_analysis_prompt
 from apps.monitoring.models import Event, IncomingMessage, MonitoringProfile
 from apps.monitoring.services.rules import RuleAnalysisResult
+from apps.ai.services.pricing import calculate_estimated_ai_cost
+from apps.ai.services.usage import (
+    AIUsageLimitExceeded,
+    check_and_reserve_ai_usage,
+    record_ai_usage_cost,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +73,24 @@ def analyze_message_with_ai(message: IncomingMessage) -> AIAnalysisResult:
     )
     ai_result.mark_started()
 
+    try:
+        check_and_reserve_ai_usage(message.profile)
+    except AIUsageLimitExceeded as exc:
+        ai_result.mark_fallback(str(exc))
+
+        logger.warning(
+            "ai_analysis_skipped_usage_limit",
+            extra={
+                "ai_result_id": str(ai_result.id),
+                "message_id": str(message.id),
+                "profile_id": message.profile_id,
+                "owner_id": message.profile.owner_id,
+                "reason": str(exc),
+            },
+        )
+
+        return ai_result
+
     started = time.perf_counter()
 
     try:
@@ -78,6 +102,16 @@ def analyze_message_with_ai(message: IncomingMessage) -> AIAnalysisResult:
         parsed = parse_ai_analysis_response(provider_response.content)
 
         duration_ms = int((time.perf_counter() - started) * 1000)
+        estimated_cost = calculate_estimated_ai_cost(
+            input_tokens=provider_response.input_tokens,
+            output_tokens=provider_response.output_tokens,
+        )
+        daily_user_cost = record_ai_usage_cost(
+            profile=message.profile,
+            estimated_cost=estimated_cost,
+            input_tokens=provider_response.input_tokens,
+            output_tokens=provider_response.output_tokens,
+        )
 
         ai_result.model_name = provider_response.model_name or settings.OPENAI_MODEL
         ai_result.mark_succeeded(
@@ -88,9 +122,14 @@ def analyze_message_with_ai(message: IncomingMessage) -> AIAnalysisResult:
             raw_response={
                 "parsed": parsed.raw_response,
                 "provider": provider_response.raw_response,
+                "usage": {
+                    "estimated_cost": str(estimated_cost),
+                    "daily_user_cost": str(daily_user_cost),
+                },
             },
             input_tokens=provider_response.input_tokens,
             output_tokens=provider_response.output_tokens,
+            estimated_cost=estimated_cost,
             duration_ms=duration_ms,
         )
 
@@ -100,8 +139,13 @@ def analyze_message_with_ai(message: IncomingMessage) -> AIAnalysisResult:
                 "ai_result_id": str(ai_result.id),
                 "message_id": str(message.id),
                 "profile_id": message.profile_id,
+                "owner_id": message.profile.owner_id,
                 "category": ai_result.category,
                 "priority_score": ai_result.priority_score,
+                "input_tokens": provider_response.input_tokens,
+                "output_tokens": provider_response.output_tokens,
+                "estimated_cost": str(estimated_cost),
+                "daily_user_cost": str(daily_user_cost),
                 "duration_ms": duration_ms,
             },
         )
@@ -115,6 +159,7 @@ def analyze_message_with_ai(message: IncomingMessage) -> AIAnalysisResult:
                 "ai_result_id": str(ai_result.id),
                 "message_id": str(message.id),
                 "profile_id": message.profile_id,
+                "owner_id": message.profile.owner_id,
                 "error": str(exc)[:1000],
             },
         )

@@ -17,6 +17,9 @@ class AIAnalysisResultAdmin(admin.ModelAdmin):
         "is_latest",
         "duration_ms",
         "created_at",
+        "input_tokens",
+        "output_tokens",
+        "estimated_cost",
     )
     list_filter = (
         "status",
