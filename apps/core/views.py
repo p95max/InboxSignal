@@ -1,9 +1,17 @@
+from django.conf import settings
 from django.db import connection
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.http import require_GET
-from django.conf import settings
 
 import redis
+
+
+@require_GET
+def home_view(request):
+    """Render public landing page."""
+
+    return render(request, "home.html")
 
 
 @require_GET

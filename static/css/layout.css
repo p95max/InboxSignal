@@ -21,6 +21,14 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.grid-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .section {
     margin-top: 30px;
 }
