@@ -154,6 +154,23 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
         ),
     )
 
+    ai_daily_call_limit = forms.IntegerField(
+        required=False,
+        min_value=1,
+        label="AI daily call limit",
+        help_text=(
+            "Optional. Leave empty to use the global profile limit. "
+            "Set a lower value to limit AI usage for this profile."
+        ),
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Use global default",
+                "min": 1,
+            }
+        ),
+    )
+
     class Meta:
         model = MonitoringProfile
         fields = [
@@ -161,6 +178,7 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
             "scenario",
             "status",
             "business_context",
+            "ai_daily_call_limit",
         ]
         widgets = {
             "name": forms.TextInput(
@@ -192,6 +210,33 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
             self.fields["alert_chat_id"].initial = (
                 source.metadata or {}
             ).get("alert_chat_id", "")
+
+        global_profile_limit = settings.AI_DAILY_CALL_LIMIT_PER_PROFILE
+
+        self.fields["ai_daily_call_limit"].widget.attrs["max"] = global_profile_limit
+        self.fields["ai_daily_call_limit"].help_text = (
+            "Optional. Leave empty to use the global profile limit "
+            f"({global_profile_limit} AI calls/day). "
+            "You can set a lower custom limit for this profile."
+        )
+
+    def clean_ai_daily_call_limit(self):
+        value = self.cleaned_data.get("ai_daily_call_limit")
+
+        if value is None:
+            return None
+
+        global_profile_limit = settings.AI_DAILY_CALL_LIMIT_PER_PROFILE
+
+        if value > global_profile_limit:
+            raise forms.ValidationError(
+                (
+                    "AI daily call limit cannot be higher than the global "
+                    f"profile limit ({global_profile_limit})."
+                )
+            )
+
+        return value
 
     def save(self, commit=True):
         profile = super().save(commit)
