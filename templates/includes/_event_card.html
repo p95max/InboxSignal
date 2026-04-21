@@ -49,7 +49,16 @@
                                 {% endif %}
                             {% endif %}
 
-                            <span class="badge badge-muted">{{ event.get_detection_source_display }}</span>
+                            {% if event.detection_source == "ai" %}
+                                <span class="badge badge-ai">AI analysis</span>
+                            {% elif event.detection_source == "rules" %}
+                                <span class="badge badge-rules">Rules</span>
+                            {% elif event.detection_source == "fallback" %}
+                                <span class="badge badge-fallback">Fallback</span>
+                            {% else %}
+                                <span class="badge badge-muted">{{ event.get_detection_source_display }}</span>
+                            {% endif %}
+
                         </div>
                     </div>
 
