@@ -55,7 +55,9 @@ def check_and_reserve_ai_usage(profile: MonitoringProfile) -> AIUsageReservation
             "AI daily call limit per user was exceeded."
         )
 
-    if current_profile_calls >= settings.AI_DAILY_CALL_LIMIT_PER_PROFILE:
+    profile_limit = profile.ai_daily_call_limit or settings.AI_DAILY_CALL_LIMIT_PER_PROFILE
+
+    if current_profile_calls >= profile_limit:
         raise AIUsageLimitExceeded(
             "AI daily call limit per profile was exceeded."
         )

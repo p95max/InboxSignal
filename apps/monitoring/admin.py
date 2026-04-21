@@ -15,6 +15,7 @@ class MonitoringProfileAdmin(admin.ModelAdmin):
         "owner",
         "scenario",
         "status",
+        "ai_daily_call_limit",
         "last_event_at",
         "created_at",
     )
@@ -35,6 +36,82 @@ class MonitoringProfileAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
         "last_event_at",
+    )
+
+    fieldsets = (
+        (
+            "Basic info",
+            {
+                "fields": (
+                    "owner",
+                    "name",
+                    "scenario",
+                    "status",
+                    "business_context",
+                )
+            },
+        ),
+        (
+            "Tracking settings",
+            {
+                "fields": (
+                    "track_leads",
+                    "track_complaints",
+                    "track_requests",
+                    "track_urgent",
+                    "track_general_activity",
+                )
+            },
+        ),
+        (
+            "Ignore rules",
+            {
+                "fields": (
+                    "ignore_greetings",
+                    "ignore_short_replies",
+                    "ignore_emojis",
+                )
+            },
+        ),
+        (
+            "Urgency rules",
+            {
+                "fields": (
+                    "urgent_negative",
+                    "urgent_deadlines",
+                    "urgent_repeated_messages",
+                )
+            },
+        ),
+        (
+            "Extraction settings",
+            {
+                "fields": (
+                    "extract_name",
+                    "extract_contact",
+                    "extract_budget",
+                    "extract_product_or_service",
+                )
+            },
+        ),
+        (
+            "AI limits",
+            {
+                "fields": (
+                    "ai_daily_call_limit",
+                )
+            },
+        ),
+        (
+            "System",
+            {
+                "fields": (
+                    "last_event_at",
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
     )
 
 

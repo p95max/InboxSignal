@@ -47,6 +47,13 @@ class MonitoringProfile(models.Model):
         help_text=_("Optional plain text business context, max 300 characters."),
     )
 
+    ai_daily_call_limit = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Leave empty to use the global AI_DAILY_CALL_LIMIT_PER_PROFILE setting.",
+    )
+
     track_leads = models.BooleanField(default=True)
     track_complaints = models.BooleanField(default=True)
     track_requests = models.BooleanField(default=True)
