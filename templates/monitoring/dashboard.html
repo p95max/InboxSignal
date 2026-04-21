@@ -55,20 +55,27 @@
                     {{ profile.name }}
                 </a>
                 <div class="muted">
-                    {{ profile.get_scenario_display }} · {{ profile.get_status_display }}
+                     {% if profile.telegram_bot_sources %}
+                {% for source in profile.telegram_bot_sources %}
+                    <span class="badge {% if source.status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
+                        Adapter: Telegram bot · {{ source.get_status_display }}
+                    </span>
+                    {% if source.external_username %}
+                        <span class="badge badge-muted">
+                            @{{ source.external_username }}
+                        </span>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <span class="badge badge-muted">
+                    Adapter: Telegram bot not connected
+                </span>
+            {% endif %}
                 </div>
             </div>
         </div>
 
         <div class="badge-row">
-            {% if profile.active_telegram_sources_count %}
-                <span class="badge badge-success">Telegram connected</span>
-            {% elif profile.telegram_sources_count %}
-                <span class="badge badge-warning">Telegram inactive</span>
-            {% else %}
-                <span class="badge badge-muted">No Telegram source</span>
-            {% endif %}
-
             <span class="badge badge-danger">Urgent open: {{ profile.urgent_open_events_count }}</span>
             <span class="badge badge-warning">Important open: {{ profile.important_open_events_count }}</span>
             <span class="badge">Open: {{ profile.open_events_count }}</span>

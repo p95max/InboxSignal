@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -98,6 +98,16 @@ def dashboard_view(request):
                 ),
                 distinct=True,
             ),
+        )
+        .prefetch_related(
+            Prefetch(
+                "connected_sources",
+                queryset=ConnectedSource.objects.filter(
+                    source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+                    is_deleted=False,
+                ).order_by("name"),
+                to_attr="telegram_bot_sources",
+            )
         )
         .order_by("-last_event_at", "-updated_at")
     )
