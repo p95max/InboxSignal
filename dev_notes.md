@@ -59,19 +59,18 @@ Webhook requires public HTTPS URL. For local development use polling.
 
 ```bash
 docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhook delete \
-  --source-id 1 \
+  --source-id 2 \
   --drop-pending-updates
 ```  
 # Start polling
 ```bash
 docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_poll \
-  --source-id 1 \
-  --drop-pending-updates
+  --source-id 2
 ```
 
 # One-time polling check
 ```bash
 docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_poll \
-  --source-id 1 \
+  --source-id 2 \
   --once
 ```

@@ -388,6 +388,8 @@ def profile_detail_view(request, profile_id: int):
         escalated=Count("id", filter=Q(escalated_at__isnull=False)),
     )
 
+    archived_events_count = archive_decision_counts["total"]
+
     def build_archive_decision_url(decision: str = "") -> str:
         query_params = {
             "status": Event.Status.ARCHIVED,
@@ -464,6 +466,7 @@ def profile_detail_view(request, profile_id: int):
             "category_choices": Event.Category.choices,
             "priority_filter_options": priority_filter_options,
             "status_filter_options": status_filter_options,
+            "archived_events_count": archived_events_count,
         },
     )
 

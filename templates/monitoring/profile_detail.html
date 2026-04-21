@@ -31,8 +31,12 @@
                 Back to events
             </a>
         {% else %}
-            <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
+            <a
+                class="button {% if selected_status == 'archived' %}button-primary{% endif %}"
+                href="{% url 'profile_detail' profile.id %}?status=archived"
+            >
                 Open archive
+                <span class="button-counter">{{ archived_events_count }}</span>
             </a>
         {% endif %}
     </div>

@@ -135,3 +135,38 @@ button:disabled {
     display: inline-flex;
     margin: 0;
 }
+
+.button-counter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.16);
+    color: var(--text-strong);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.button-primary .button-counter {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+}
+
+.button-counter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+}

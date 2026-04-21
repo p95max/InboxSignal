@@ -62,9 +62,13 @@
                                 View events
                             </a>
 
-                            <a class="button" href="{% url 'profile_detail' profile.id %}?status=archived">
-                                Archive
-                            </a>
+                                <a
+                                    class="button {% if selected_status == 'archived' %}button-primary{% endif %}"
+                                    href="{% url 'profile_detail' profile.id %}?status=archived"
+                                >
+                                    Archive
+                                    <span class="button-counter">{{ profile.archived_events_count }}</span>
+                                </a>
 
                             <form
                                 method="post"
