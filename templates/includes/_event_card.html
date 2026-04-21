@@ -59,6 +59,26 @@
                                 <span class="badge badge-muted">{{ event.get_detection_source_display }}</span>
                             {% endif %}
 
+                            {% with alerts=event.prefetched_alert_deliveries %}
+                            {% if alerts %}
+                                {% with alert=alerts.0 %}
+                                    {% if alert.status == "sent" %}
+                                        <span class="badge badge-success">Alert sent</span>
+                                    {% elif alert.status == "pending" %}
+                                        <span class="badge badge-warning">Alert pending</span>
+                                    {% elif alert.status == "failed" %}
+                                        <span class="badge badge-danger">Alert failed</span>
+                                    {% elif alert.status == "skipped" %}
+                                        <span class="badge badge-muted">Alert not send</span>
+                                    {% else %}
+                                        <span class="badge badge-muted">Alert: {{ alert.get_status_display }}</span>
+                                    {% endif %}
+                                {% endwith %}
+                            {% else %}
+                                <span class="badge badge-muted">No alert</span>
+                            {% endif %}
+                        {% endwith %}
+
                         </div>
                     </div>
 

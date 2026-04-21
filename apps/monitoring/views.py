@@ -14,6 +14,7 @@ from apps.core.services.rate_limits import RateLimitPeriod, check_rate_limit
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.forms import MonitoringProfileCreateForm, MonitoringProfileUpdateForm
 from apps.monitoring.models import Event, MonitoringProfile
+from apps.alerts.models import AlertDelivery
 
 
 @login_required
@@ -188,6 +189,13 @@ def profile_detail_view(request, profile_id: int):
         Event.objects.select_related(
             "incoming_message",
             "incoming_message__external_contact",
+        )
+        .prefetch_related(
+            Prefetch(
+                "alert_deliveries",
+                queryset=AlertDelivery.objects.order_by("-created_at"),
+                to_attr="prefetched_alert_deliveries",
+            )
         )
         .filter(profile=profile)
         .order_by("-created_at")
