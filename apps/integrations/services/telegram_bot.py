@@ -58,23 +58,19 @@ def handle_telegram_webhook_update(
         )
         return None
 
-    result = ingest_incoming_message(
-        profile=source.profile,
-        source=source,
-        channel=IncomingMessage.Channel.TELEGRAM,
-        external_source_id=source.external_id or str(source.id),
-        external_chat_id=parsed_message.external_chat_id,
-        external_message_id=parsed_message.external_message_id,
-        sender_id=parsed_message.sender_id,
-        sender_username=parsed_message.sender_username,
-        sender_display_name=parsed_message.sender_display_name,
-        text=parsed_message.text,
-        raw_payload=update,
-        received_at=parsed_message.received_at,
-        enqueue_processing=enqueue_processing,
+    text = (parsed_message.text or "").strip().lower()
+
+    logger.info(
+        "telegram_start_command_debug",
+        extra={
+            "source_id": source.id,
+            "profile_id": source.profile_id,
+            "text": parsed_message.text,
+            "message_created": result.created,
+        },
     )
 
-    if result.created and parsed_message.text.strip() == "/start":
+    if result.created and text.startswith("/start"):
         metadata = source.metadata or {}
 
         if not str(metadata.get("alert_chat_id", "")).strip():
@@ -114,6 +110,22 @@ def handle_telegram_webhook_update(
                         "error": str(exc)[:1000],
                     },
                 )
+
+    result = ingest_incoming_message(
+        profile=source.profile,
+        source=source,
+        channel=IncomingMessage.Channel.TELEGRAM,
+        external_source_id=source.external_id or str(source.id),
+        external_chat_id=parsed_message.external_chat_id,
+        external_message_id=parsed_message.external_message_id,
+        sender_id=parsed_message.sender_id,
+        sender_username=parsed_message.sender_username,
+        sender_display_name=parsed_message.sender_display_name,
+        text=parsed_message.text,
+        raw_payload=update,
+        received_at=parsed_message.received_at,
+        enqueue_processing=enqueue_processing,
+    )
 
     logger.info(
         "telegram_webhook_update_ingested",

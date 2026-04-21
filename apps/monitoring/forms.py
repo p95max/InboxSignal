@@ -146,9 +146,8 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
         required=False,
         label="Alert chat ID",
         help_text=(
-            "Optional. Telegram chat ID or @channelusername for alerts. "
-            "Send /start to your bot to get your chat ID. "
-            "If empty, alerts will not be sent."
+            "Optional. Telegram chat ID for alerts. "
+            "After profile creation send /start to your bot to enable Alerts. "
         ),
         widget=forms.TextInput(
             attrs={
