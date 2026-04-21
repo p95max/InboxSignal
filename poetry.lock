@@ -1789,6 +1789,18 @@ hiredis = ["hiredis (>=3.0.0)"]
 ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==23.2.1)", "requests (>=2.31.0)"]
 
 [[package]]
+name = "result"
+version = "0.17.0"
+description = "A Rust-like result type for Python"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "result-0.17.0-py3-none-any.whl", hash = "sha256:49fd668b4951ad15800b8ccefd98b6b94effc789607e19c65064b775570933e8"},
+    {file = "result-0.17.0.tar.gz", hash = "sha256:b73da420c0cb1a3bf741dbd41ff96dedafaad6a1b3ef437a9e33e380bb0d91cf"},
+]
+
+[[package]]
 name = "ruff"
 version = "0.15.11"
 description = "An extremely fast Python linter and code formatter, written in Rust."
@@ -2061,4 +2073,4 @@ brotli = ["brotli"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "fbbe89977cf7a82cc1e6311fe2d247e087bad3e5b3fca969cd5202a8d7f2e765"
+content-hash = "0ffd73fed96c691a413c9561bd44bedf67ce984167e101572f45788579dbcd76"

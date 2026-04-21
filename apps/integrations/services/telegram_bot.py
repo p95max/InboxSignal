@@ -2,6 +2,10 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone as dt_timezone
 from typing import Any
+from apps.integrations.services.customer_rate_limits import (
+    check_telegram_customer_message_limits,
+    send_telegram_customer_rate_limit_notice,
+)
 
 from apps.alerts.services.telegram_delivery import telegram_send_message
 from apps.integrations.models import ConnectedSource
@@ -58,7 +62,53 @@ def handle_telegram_webhook_update(
         )
         return None
 
+    limit_result = check_telegram_customer_message_limits(
+        source=source,
+        parsed_message=parsed_message,
+        raw_update=update,
+    )
+
+    if not limit_result.allowed:
+        logger.warning(
+            "telegram_customer_message_rate_limited",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+                "external_chat_id": parsed_message.external_chat_id,
+                "sender_id": parsed_message.sender_id,
+                "reason": limit_result.reason,
+                "retry_after_seconds": limit_result.retry_after_seconds,
+                "limit": limit_result.limit,
+                "current": limit_result.current,
+            },
+        )
+
+        send_telegram_customer_rate_limit_notice(
+            source=source,
+            parsed_message=parsed_message,
+            limit_result=limit_result,
+        )
+
+        return None
+
     text = (parsed_message.text or "").strip().lower()
+    is_start_command = text.startswith("/start")
+
+    result = ingest_incoming_message(
+        profile=source.profile,
+        source=source,
+        channel=IncomingMessage.Channel.TELEGRAM,
+        external_source_id=source.external_id or str(source.id),
+        external_chat_id=parsed_message.external_chat_id,
+        external_message_id=parsed_message.external_message_id,
+        sender_id=parsed_message.sender_id,
+        sender_username=parsed_message.sender_username,
+        sender_display_name=parsed_message.sender_display_name,
+        text=parsed_message.text,
+        raw_payload=update,
+        received_at=parsed_message.received_at,
+        enqueue_processing=enqueue_processing,
+    )
 
     logger.info(
         "telegram_start_command_debug",
@@ -70,7 +120,7 @@ def handle_telegram_webhook_update(
         },
     )
 
-    if result.created and text.startswith("/start"):
+    if result.created and is_start_command:
         metadata = source.metadata or {}
 
         if not str(metadata.get("alert_chat_id", "")).strip():
@@ -110,22 +160,6 @@ def handle_telegram_webhook_update(
                         "error": str(exc)[:1000],
                     },
                 )
-
-    result = ingest_incoming_message(
-        profile=source.profile,
-        source=source,
-        channel=IncomingMessage.Channel.TELEGRAM,
-        external_source_id=source.external_id or str(source.id),
-        external_chat_id=parsed_message.external_chat_id,
-        external_message_id=parsed_message.external_message_id,
-        sender_id=parsed_message.sender_id,
-        sender_username=parsed_message.sender_username,
-        sender_display_name=parsed_message.sender_display_name,
-        text=parsed_message.text,
-        raw_payload=update,
-        received_at=parsed_message.received_at,
-        enqueue_processing=enqueue_processing,
-    )
 
     logger.info(
         "telegram_webhook_update_ingested",
