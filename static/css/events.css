@@ -218,3 +218,37 @@
     white-space: normal;
 }
 
+.landing-event-note,
+.landing-event-message {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.landing-event-note p,
+.landing-event-message p {
+    margin: 0.35rem 0 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.landing-event-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.landing-event-footer span,
+.landing-event-footer strong {
+    display: block;
+}
+
+@media (max-width: 640px) {
+    .landing-event-footer {
+        grid-template-columns: 1fr;
+    }
+}
+
