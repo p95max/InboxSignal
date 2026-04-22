@@ -38,7 +38,7 @@
             </div>
         {% endif %}
 
-        <form method="post">
+        <form method="post" data-auth-form="login" novalidate>
             {% csrf_token %}
 
             <div class="field">

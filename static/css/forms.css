@@ -578,3 +578,29 @@ input[type="radio"],
     border-radius: 10px;
     background: rgba(15, 23, 42, 0.7);
 }
+
+.client-error {
+    min-height: 18px;
+    margin-top: 6px;
+    color: #fca5a5;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.auth-card input.is-invalid {
+    border-color: rgba(239, 68, 68, 0.75);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.auth-card input.is-valid {
+    border-color: rgba(61, 220, 151, 0.55);
+    box-shadow: 0 0 0 3px rgba(61, 220, 151, 0.10);
+}
+
+.auth-card input.is-invalid:focus {
+    border-color: rgba(239, 68, 68, 0.95);
+}
+
+.auth-card input.is-valid:focus {
+    border-color: rgba(61, 220, 151, 0.75);
+}
