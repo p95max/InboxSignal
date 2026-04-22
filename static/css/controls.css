@@ -1,187 +1,156 @@
 /* =========================
-   Modern top navigation
+   Buttons
+   Supports .button and Bootstrap .btn
    ========================= */
 
-.topbar {
-    position: sticky;
-    top: 0;
-    z-index: 50;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-    background:
-        linear-gradient(180deg, rgba(11, 16, 32, 0.88), rgba(11, 16, 32, 0.72));
-    backdrop-filter: blur(18px);
-}
-
-.topbar-inner {
-    max-width: 1180px;
-    min-height: 72px;
-    margin: 0 auto;
-    padding: 12px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-}
-
-.brand,
-.brand-modern {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-    color: var(--text-strong);
-    font-weight: 850;
-    letter-spacing: -0.025em;
-}
-
-.brand:hover,
-.brand-modern:hover {
-    color: var(--text-strong);
-}
-
-.brand::before {
-    display: none;
-}
-
-.brand-mark {
+.button,
+button,
+.btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
-    border: 1px solid rgba(79, 140, 255, 0.45);
-    border-radius: 14px;
-    background:
-        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.26), transparent 28px),
-        linear-gradient(135deg, #386dff, #3ddc97);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 900;
-    letter-spacing: -0.04em;
-    box-shadow: 0 12px 30px rgba(79, 140, 255, 0.26);
-}
-
-.brand-mark-logo {
-    padding: 0;
-    overflow: hidden;
-    background: transparent;
-}
-
-.brand-mark-logo img {
-    display: block;
-    width: 42px;
-    height: 42px;
-    object-fit: cover;
-    border-radius: 14px;
-}
-
-.brand-text {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    line-height: 1.05;
-}
-
-.brand-title {
-    color: var(--text-strong);
-    font-size: 15px;
-    font-weight: 850;
-    letter-spacing: -0.025em;
-    white-space: nowrap;
-}
-
-.brand-subtitle {
-    margin-top: 3px;
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 650;
-    white-space: nowrap;
-}
-
-.nav-actions,
-.nav-actions-modern {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    min-width: 0;
-    color: var(--muted);
-    font-size: 14px;
-}
-
-.nav-link-modern {
-    display: inline-flex;
-    align-items: center;
+    gap: 8px;
     min-height: 38px;
-    padding: 8px 10px;
-    border-radius: 999px;
-    color: var(--muted);
-    font-size: 14px;
-    font-weight: 700;
-}
-
-.nav-link-modern:hover {
-    background: rgba(255, 255, 255, 0.055);
-    color: var(--text-strong);
-}
-
-.nav-dashboard-button {
-    border-radius: 999px;
-    padding-inline: 16px;
-}
-
-.nav-user-link {
-    padding: 0;
-    border: 0;
-    background: transparent;
+    padding: 8px 13px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text);
     cursor: pointer;
     font: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.2;
+    transition:
+        transform 0.12s ease,
+        border-color 0.15s ease,
+        background 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
-.nav-user-link:hover {
-    color: var(--primary-hover);
+.button:hover,
+button:hover,
+.btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-strong);
 }
 
-.user-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    max-width: 260px;
-    min-height: 38px;
-    padding: 5px 10px 5px 5px;
-    border: 1px solid rgba(148, 163, 184, 0.16);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.035);
-    color: var(--text);
+.button:active,
+button:active,
+.btn:active {
+    transform: translateY(0);
 }
 
-.user-avatar {
+.button-primary,
+.btn-primary {
+    border-color: rgba(79, 140, 255, 0.8);
+    background: linear-gradient(135deg, #386dff, #5e9bff);
+    color: #fff;
+    box-shadow: 0 10px 28px rgba(79, 140, 255, 0.28);
+}
+
+.button-primary:hover,
+.btn-primary:hover {
+    border-color: var(--primary-hover);
+    background: linear-gradient(135deg, #457aff, #73a8ff);
+    color: #fff;
+}
+
+.button-danger,
+.btn-danger {
+    border-color: rgba(255, 92, 122, 0.45);
+    background: var(--danger-soft);
+    color: #ff8ca1;
+}
+
+.button-danger:hover,
+.btn-danger:hover {
+    border-color: rgba(255, 92, 122, 0.75);
+    background: rgba(255, 92, 122, 0.20);
+    color: #ffd5dd;
+}
+
+.button-warning,
+.btn-warning {
+    border-color: rgba(246, 196, 83, 0.45);
+    background: var(--warning-soft);
+    color: #ffd978;
+}
+
+.button-warning:hover,
+.btn-warning:hover {
+    border-color: rgba(246, 196, 83, 0.75);
+    background: rgba(246, 196, 83, 0.20);
+    color: #ffe8a3;
+}
+
+.button-success,
+.btn-success {
+    border-color: rgba(61, 220, 151, 0.45);
+    background: var(--success-soft);
+    color: #6ef0b7;
+}
+
+.button-success:hover,
+.btn-success:hover {
+    border-color: rgba(61, 220, 151, 0.75);
+    background: rgba(61, 220, 151, 0.20);
+    color: #b4ffd9;
+}
+
+.button-ghost {
+    border-color: rgba(148, 163, 184, 0.14);
+    background: rgba(255, 255, 255, 0.025);
+    color: var(--muted);
+}
+
+.button-ghost:hover {
+    border-color: rgba(148, 163, 184, 0.32);
+    background: rgba(255, 255, 255, 0.065);
+    color: var(--text-strong);
+}
+
+.button-disabled,
+.button-disabled:hover,
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+    transform: none;
+    background: rgba(148, 163, 184, 0.08);
+    color: var(--muted-soft);
+}
+
+.button-icon {
+    min-width: 38px;
+    padding: 8px 12px;
+    font-size: 22px;
+    line-height: 1;
+}
+
+.button-counter {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    flex: 0 0 28px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
     border-radius: 999px;
-    background: var(--primary-soft);
-    color: #aac7ff;
-    font-size: 13px;
-    font-weight: 850;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
 }
 
-.user-email {
-    min-width: 0;
-    max-width: 190px;
-    overflow: hidden;
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 650;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.button-primary .button-counter {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
 }
 
-.logout-form {
+.inline-form {
+    display: inline-flex;
     margin: 0;
 }
