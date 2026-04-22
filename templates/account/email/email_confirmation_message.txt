@@ -1,6 +1,6 @@
 Hello,
 
-Please confirm your email address for Messaging Monitoring.
+Please confirm your email address for InboxSignal.
 
 Confirmation link:
 
@@ -8,4 +8,5 @@ Confirmation link:
 
 This link is valid for a limited time.
 
-Messaging Monitoring
+Best regards,
+InboxSignal Team
