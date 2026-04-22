@@ -85,12 +85,26 @@
                                             @{{ source.external_username }}
                                         </span>
                                     {% endif %}
+
+                                    {% if source.metadata.alert_chat_id %}
+                                        <span class="badge badge-success">
+                                            Alerts: enabled
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-warning">
+                                            Alerts: not enabled
+                                        </span>
+                                        <span class="badge badge-muted">
+                                            Send /start_alerts to this bot
+                                        </span>
+                                    {% endif %}
                                 {% endfor %}
                             {% else %}
                                 <span class="badge badge-muted">
                                     Adapter: Telegram bot not connected
                                 </span>
                             {% endif %}
+
                         </div>
                     </div>
                 </div>
