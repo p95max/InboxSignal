@@ -15,22 +15,30 @@
             </a>
 
             <nav class="primary-nav" aria-label="Primary navigation">
-                <a
-                    class="nav-link-modern {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}"
-                    href="{% url 'home' %}"
-                >
-                    Home
-                </a>
+    <a
+        class="nav-link-modern {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}"
+        href="{% url 'home' %}"
+    >
+        Home
+    </a>
 
-                {% if request.user.is_authenticated %}
-                    <a
-                        class="nav-link-modern {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'profile_detail' %}is-active{% endif %}"
-                        href="{% url 'dashboard' %}"
-                    >
-                        Dashboard
-                    </a>
-                {% endif %}
-            </nav>
+    <a
+        class="nav-link-modern {% if request.resolver_match.url_name == 'about' %}is-active{% endif %}"
+        href="{% url 'about' %}"
+    >
+        About
+    </a>
+
+    {% if request.user.is_authenticated %}
+        <a
+            class="nav-link-modern {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'profile_detail' %}is-active{% endif %}"
+            href="{% url 'dashboard' %}"
+        >
+            Dashboard
+        </a>
+    {% endif %}
+</nav>
+
         </div>
 
         <nav class="nav-actions nav-actions-modern" aria-label="Account navigation">

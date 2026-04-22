@@ -3,10 +3,8 @@
 {% block title %}InboxSignal | Message triage & alerts{% endblock %}
 
 {% block content %}
-
 <section class="landing-hero">
     <div class="landing-hero-content">
-
         <h1>Get important messages without reading everything manually.</h1>
 
         <p class="landing-lead">
@@ -31,57 +29,14 @@
         </div>
     </div>
 
-{% include "includes/_landing_preview_carousel.html" %}
-
-</section>
-
-<section class="section">
-    <div class="section-heading">
-        <h2 class="section-title">What the system does</h2>
-        <p class="muted">
-            It is not a chat client and not a full CRM. It is a filtering,
-            prioritization and alerting layer for Telegram communication.
-        </p>
-    </div>
-
-    <div class="grid grid-3">
-        <article class="card feature-card">
-            <div class="feature-icon">🎯</div>
-            <h3>Detects important signals</h3>
-            <p>
-                Finds leads, complaints, booking requests and urgent messages
-                without forcing you to read every incoming message manually.
-            </p>
-        </article>
-
-        <article class="card feature-card">
-            <div class="feature-icon">🧠</div>
-            <h3>Uses AI only when useful</h3>
-            <p>
-                Clear messages are handled by fast rule-based logic. AI is used as
-                an additional layer for unclear cases, better summaries, priority
-                scoring and extracted data.
-            </p>
-        </article>
-
-        <article class="card feature-card">
-            <div class="feature-icon">⚙️</div>
-            <h3>Controls AI usage per profile</h3>
-            <p>
-                Each monitoring profile can have its own AI daily call limit.
-                This keeps costs predictable and lets users decide how much AI
-                analysis each profile should use.
-            </p>
-        </article>
-    </div>
+    {% include "includes/_landing_preview_carousel.html" %}
 </section>
 
 <section id="how-it-works" class="section">
     <div class="section-heading">
         <h2 class="section-title">How it works</h2>
         <p class="muted">
-            Connect Telegram, configure what matters, set optional AI limits,
-            then work with prioritized events.
+            Connect a Telegram bot, configure what matters, then review prioritized events.
         </p>
     </div>
 
@@ -90,145 +45,27 @@
             <span class="step-number">1</span>
             <h3>Connect Telegram</h3>
             <p>
-                Add a Telegram bot token to a monitoring profile. Credentials are
-                encrypted and not shown again. Alerts can be activated by sending
-                /start_alerts to the bot from the destination chat.
+                Add a Telegram bot token to a monitoring profile.
+                The service connects to this bot only, not to your personal Telegram account.
             </p>
         </article>
 
         <article class="card step-card">
             <span class="step-number">2</span>
-            <h3>Configure signals and limits</h3>
+            <h3>Configure signals</h3>
             <p>
                 Choose what to track: leads, complaints, requests, urgent messages
-                or general activity. Optionally set a profile-level AI daily call
-                limit for tighter cost control.
+                or general activity. Optionally set profile-level AI limits.
             </p>
         </article>
 
         <article class="card step-card">
             <span class="step-number">3</span>
-            <h3>Review prioritized events</h3>
+            <h3>Review events</h3>
             <p>
-                The dashboard shows structured events instead of raw message noise.
-                Important and urgent events can trigger Telegram alerts.
+                InboxSignal shows structured events instead of raw message noise.
+                Urgent events can trigger Telegram alerts.
             </p>
-        </article>
-    </div>
-</section>
-
-<section class="section">
-    <div class="section-heading">
-        <h2 class="section-title">Bot access only</h2>
-        <p class="muted">
-            Messaging Monitoring works with the Telegram bot you connect.
-            It does not connect to your personal Telegram account.
-        </p>
-    </div>
-
-    <div class="grid grid-3">
-        <article class="card feature-card">
-            <div class="feature-icon">🤖</div>
-            <h3>Telegram bot, not account access</h3>
-            <p>
-                The system uses the bot token provided by the user. It cannot read
-                your private Telegram chats, contacts or account history.
-            </p>
-        </article>
-
-        <article class="card feature-card">
-            <div class="feature-icon">📥</div>
-            <h3>Only incoming bot messages</h3>
-            <p>
-                The system stores only messages and technical metadata that are
-                received by the connected bot, such as chat ID, message ID, sender
-                label, message text and received time.
-            </p>
-        </article>
-
-        <article class="card feature-card">
-            <div class="feature-icon">🔐</div>
-            <h3>Encrypted bot credentials</h3>
-            <p>
-                Bot credentials are encrypted before storage. Alert destination
-                settings are stored only to know where internal notifications
-                should be sent.
-            </p>
-        </article>
-    </div>
-</section>
-
-<section class="section">
-    <div class="section-heading">
-        <h2 class="section-title">Rules-first, AI-assisted</h2>
-        <p class="muted">
-            The system is designed to avoid unnecessary AI calls. This makes the MVP
-            cheaper, faster and easier to reason about.
-        </p>
-    </div>
-
-    <div class="grid grid-3">
-        <article class="card feature-card">
-            <div class="feature-icon">⚡</div>
-            <h3>Fast rule-based checks</h3>
-            <p>
-                Obvious greetings, short replies, spam-like messages and clear
-                keyword signals can be handled without calling AI.
-            </p>
-        </article>
-
-        <article class="card feature-card">
-            <div class="feature-icon">❓</div>
-            <h3>AI for ambiguous messages</h3>
-            <p>
-                If a message is unclear, has mixed intent or needs structured
-                extraction, AI can classify it and generate a concise summary.
-            </p>
-        </article>
-
-        <article class="card feature-card">
-            <div class="feature-icon">📊</div>
-            <h3>Predictable usage</h3>
-            <p>
-                Global account limits and profile-level limits help prevent
-                uncontrolled AI usage and make the system safer for production.
-            </p>
-        </article>
-    </div>
-</section>
-
-<section class="section">
-    <div class="section-heading">
-        <h2 class="section-title">Use cases</h2>
-        <p class="muted">
-            One system — multiple monitoring scenarios.
-        </p>
-    </div>
-
-    <div class="grid grid-5">
-        <article class="card use-case-card">
-            <h3>Support</h3>
-            <p>Find complaints before they become bigger problems.</p>
-        </article>
-
-        <article class="card use-case-card">
-            <h3>Sales</h3>
-            <p>Detect buying intent, price questions and availability requests.</p>
-        </article>
-
-        <article class="card use-case-card">
-            <h3>Booking</h3>
-            <p>Track appointments, reservations and service requests.</p>
-        </article>
-
-        <article class="card use-case-card">
-            <h3>Activity</h3>
-            <p>Get a structured view of important Telegram activity.</p>
-        </article>
-
-        <article class="card use-case-card">
-            <h3>Custom</h3>
-            <p>Configure monitoring rules and AI limits for a specific business scenario.</p>
         </article>
     </div>
 </section>
@@ -248,8 +85,11 @@
                 Open dashboard
             </a>
         {% else %}
-            <a class="button button-primary" href="{% url 'login' %}">
+            <a class="button button-primary" href="{% url 'signup' %}">
                 Get started
+            </a>
+            <a class="button" href="{% url 'about' %}">
+                Learn more
             </a>
         {% endif %}
     </div>

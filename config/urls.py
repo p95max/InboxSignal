@@ -2,7 +2,7 @@ from allauth.account.views import LoginView, LogoutView, SignupView
 from django.contrib import admin
 from django.urls import include, path
 
-from apps.core.views import health_check, home_view
+from apps.core.views import health_check, home_view, about_view
 from apps.accounts.views import account_delete_view
 from apps.monitoring.views import (
     dashboard_view,
@@ -13,6 +13,7 @@ from apps.monitoring.views import (
 
 urlpatterns = [
     path("", home_view, name="home"),
+    path("about/", about_view, name="about"),
     path("dashboard/", dashboard_view, name="dashboard"),
     path("profiles/<int:profile_id>/", profile_detail_view, name="profile_detail"),
     path(

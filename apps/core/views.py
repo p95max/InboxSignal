@@ -13,6 +13,11 @@ def home_view(request):
 
     return render(request, "home.html")
 
+def about_view(request):
+    """Render public about page."""
+
+    return render(request, "about.html")
+
 
 @require_GET
 def health_check(request):
