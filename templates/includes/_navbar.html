@@ -19,10 +19,13 @@
                 </a>
 
                 <div class="user-chip" title="{{ request.user.email }}">
-                    <span class="user-avatar">
-                        {{ request.user.email|first|upper }}
-                    </span>
-                    <span class="user-email">{{ request.user.email }}</span>
+                    <button
+                        class="nav-user-link"
+                        type="button"
+                        data-modal-open="accountSettingsModal"
+                    >
+                        {{ request.user.email }}
+                    </button>
                 </div>
 
                 <form class="logout-form" method="post" action="{% url 'logout' %}">

@@ -1,0 +1,70 @@
+{% if request.user.is_authenticated %}
+<div class="modal" id="accountSettingsModal" aria-hidden="true">
+    <div class="modal-backdrop" data-modal-close></div>
+
+    <div class="modal-dialog account-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="accountSettingsTitle">
+        <div class="modal-header">
+            <div>
+                <h2 id="accountSettingsTitle">Account settings</h2>
+                <p class="muted">Manage your account access and deletion.</p>
+            </div>
+
+            <button class="modal-close" type="button" data-modal-close aria-label="Close">
+                ×
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <section class="account-settings-section">
+                <h3>Account</h3>
+
+                <div class="account-settings-row">
+                    <span class="muted">Email</span>
+                    <strong>{{ request.user.email }}</strong>
+                </div>
+            </section>
+
+            <section class="account-settings-section danger-zone">
+                <h3>Danger zone</h3>
+
+                <p class="muted">
+                    Deleting your account will permanently remove your monitoring profiles,
+                    connected Telegram sources, incoming messages, events, AI analysis results
+                    and alert delivery history.
+                </p>
+
+                <form
+                    method="post"
+                    action="{% url 'account_delete' %}"
+                    class="account-delete-form"
+                    data-delete-account-form
+                    data-confirm-message="This action cannot be undone. Delete your account permanently?"
+                >
+                    {% csrf_token %}
+
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+                    <div class="field">
+                        <label for="account-delete-email">
+                            Type your email address to confirm deletion
+                        </label>
+                        <input
+                            id="account-delete-email"
+                            name="confirmation_email"
+                            class="form-control"
+                            type="email"
+                            placeholder="{{ request.user.email }}"
+                            autocomplete="off"
+                            required
+                        >
+                    </div>
+
+                    <button class="button button-danger auth-button-full" type="submit">
+                        Delete account permanently
+                    </button>
+                </form>
+            </section>
+        </div>
+    </div>
+</div>
+{% endif %}

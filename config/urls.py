@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 from apps.core.views import health_check, home_view
+from apps.accounts.views import account_delete_view
 from apps.monitoring.views import (
     dashboard_view,
     event_action_view,
@@ -28,6 +29,7 @@ urlpatterns = [
 
     # django-allauth account + social auth urls.
     path("accounts/", include("allauth.urls")),
+    path("account/delete/", account_delete_view, name="account_delete"),
 
     path("admin/", admin.site.urls),
     path("health/", health_check, name="health"),
