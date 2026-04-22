@@ -2,26 +2,39 @@
 
 <header class="topbar">
     <div class="topbar-inner">
-        <a class="brand brand-modern" href="{% url 'home' %}" aria-label="InboxSignal home">
-            <span class="brand-mark brand-mark-logo">
-                <img src="{% static 'img/logo.png' %}" alt="InboxSignal logo">
-            </span>
-            <span class="brand-text">
-                <span class="brand-title">InboxSignal</span>
-                <span class="brand-subtitle">Message triage & alerts</span>
-            </span>
-        </a>
+        <div class="topbar-left">
+            <a class="brand brand-modern" href="{% url 'home' %}" aria-label="InboxSignal home">
+                <span class="brand-mark brand-mark-logo">
+                    <img src="{% static 'img/logo.png' %}" alt="InboxSignal logo">
+                </span>
 
-        <nav class="nav-actions nav-actions-modern" aria-label="Main navigation">
-            {% if request.user.is_authenticated %}
-                <a class="nav-link-modern" href="{% url 'home' %}">
+                <span class="brand-text">
+                    <span class="brand-title">InboxSignal</span>
+                    <span class="brand-subtitle">Message triage & alerts</span>
+                </span>
+            </a>
+
+            <nav class="primary-nav" aria-label="Primary navigation">
+                <a
+                    class="nav-link-modern {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}"
+                    href="{% url 'home' %}"
+                >
                     Home
                 </a>
 
-                <a class="button button-primary nav-dashboard-button" href="{% url 'dashboard' %}">
-                    Dashboard
-                </a>
+                {% if request.user.is_authenticated %}
+                    <a
+                        class="nav-link-modern {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'profile_detail' %}is-active{% endif %}"
+                        href="{% url 'dashboard' %}"
+                    >
+                        Dashboard
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
 
+        <nav class="nav-actions nav-actions-modern" aria-label="Account navigation">
+            {% if request.user.is_authenticated %}
                 <div class="user-chip" title="{{ request.user.email }}">
                     <button
                         class="nav-user-link"
@@ -39,12 +52,19 @@
                     </button>
                 </form>
             {% else %}
-
-                <a class="nav-link-modern" href="{% url 'login' %}">
+                <a
+                    class="nav-link-modern {% if request.resolver_match.url_name == 'login' %}is-active{% endif %}"
+                    href="{% url 'login' %}"
+                >
                     Login
                 </a>
 
-                <a class="button button-primary" href="{% url 'signup' %}">Get started</a>
+                <a
+                    class="button button-primary {% if request.resolver_match.url_name == 'signup' %}is-active{% endif %}"
+                    href="{% url 'signup' %}"
+                >
+                    Get started
+                </a>
             {% endif %}
         </nav>
     </div>

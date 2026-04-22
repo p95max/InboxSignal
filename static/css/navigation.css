@@ -185,3 +185,61 @@
 .logout-form {
     margin: 0;
 }
+
+
+@media (max-width: 760px) {
+    .topbar-inner {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .topbar-left {
+        width: 100%;
+        justify-content: space-between;
+        gap: 14px;
+    }
+
+    .primary-nav {
+        flex-shrink: 0;
+    }
+
+    .nav-actions-modern {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .user-chip {
+        max-width: 100%;
+    }
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    min-width: 0;
+}
+
+.primary-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.nav-link-modern.is-active {
+    background: rgba(79, 140, 255, 0.14);
+    color: var(--text-strong);
+}
+
+.nav-link-modern.is-active:hover {
+    background: rgba(79, 140, 255, 0.18);
+    color: var(--text-strong);
+}
+
+.button.is-active {
+    box-shadow:
+        0 0 0 1px rgba(79, 140, 255, 0.22),
+        0 12px 28px rgba(79, 140, 255, 0.18);
+}
