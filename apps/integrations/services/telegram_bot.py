@@ -14,6 +14,11 @@ from apps.alerts.services.telegram_delivery import telegram_send_message
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.models import IncomingMessage
 from apps.monitoring.services.ingestion import IngestIncomingMessageResult, ingest_incoming_message
+from apps.integrations.services.telegram_commands import (
+    is_alerts_start_command,
+    is_start_command,
+    is_system_command,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -38,7 +43,7 @@ def handle_telegram_webhook_update(
     update: dict[str, Any],
     enqueue_processing: bool = True,
 ) -> IngestIncomingMessageResult | None:
-    """Handle Telegram Bot API update and ingest supported messages."""
+    """Handle Telegram Bot API update and ingest supported customer messages."""
 
     update_id = update.get("update_id")
 
@@ -63,6 +68,25 @@ def handle_telegram_webhook_update(
                 "reason": "unsupported_update_or_empty_text",
             },
         )
+        return None
+
+    if is_system_command(parsed_message.text):
+        handle_telegram_system_command(
+            source=source,
+            parsed_message=parsed_message,
+        )
+
+        logger.info(
+            "telegram_system_command_handled",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+                "update_id": update_id,
+                "external_chat_id": parsed_message.external_chat_id,
+                "text": parsed_message.text,
+            },
+        )
+
         return None
 
     limit_result = check_telegram_customer_message_limits(
@@ -94,9 +118,6 @@ def handle_telegram_webhook_update(
 
         return None
 
-    text = (parsed_message.text or "").strip().lower()
-    is_start_command = text.startswith("/start")
-
     result = ingest_incoming_message(
         profile=source.profile,
         source=source,
@@ -113,58 +134,7 @@ def handle_telegram_webhook_update(
         enqueue_processing=enqueue_processing,
     )
 
-    logger.info(
-        "telegram_start_command_debug",
-        extra={
-            "source_id": source.id,
-            "profile_id": source.profile_id,
-            "text": parsed_message.text,
-            "message_created": result.created,
-        },
-    )
-
-    if result.created and is_start_command:
-        metadata = source.metadata or {}
-
-        if not str(metadata.get("alert_chat_id", "")).strip():
-            metadata["alert_chat_id"] = parsed_message.external_chat_id
-            source.metadata = metadata
-            source.save(update_fields=["metadata", "updated_at"])
-
-            logger.info(
-                "telegram_alert_chat_auto_bound",
-                extra={
-                    "source_id": source.id,
-                    "profile_id": source.profile_id,
-                    "chat_id": parsed_message.external_chat_id,
-                    "message_id": str(result.message.id),
-                },
-            )
-
-            try:
-                bot_token = source.get_credentials()
-
-                if bot_token:
-                    telegram_send_message(
-                        bot_token=bot_token,
-                        chat_id=parsed_message.external_chat_id,
-                        text=(
-                            "✅ Alerts have been enabled for this chat.\n\n"
-                            "Future monitoring alerts will be sent here."
-                        ),
-                    )
-            except Exception as exc:
-                logger.warning(
-                    "telegram_alert_chat_auto_bound_confirmation_failed",
-                    extra={
-                        "source_id": source.id,
-                        "profile_id": source.profile_id,
-                        "chat_id": parsed_message.external_chat_id,
-                        "error": str(exc)[:1000],
-                    },
-                )
-
-    if result.created and not is_start_command:
+    if result.created:
         maybe_send_telegram_customer_auto_reply(
             source=source,
             message=result.message,
@@ -184,6 +154,133 @@ def handle_telegram_webhook_update(
     )
 
     return result
+
+
+def handle_telegram_system_command(
+    *,
+    source: ConnectedSource,
+    parsed_message: TelegramParsedMessage,
+) -> None:
+    """Handle Telegram system commands without adding them to monitoring pipeline."""
+
+    if is_alerts_start_command(parsed_message.text):
+        bind_telegram_alert_chat(
+            source=source,
+            chat_id=parsed_message.external_chat_id,
+        )
+        return
+
+    if is_start_command(parsed_message.text):
+        send_telegram_start_message(
+            source=source,
+            chat_id=parsed_message.external_chat_id,
+        )
+
+
+def bind_telegram_alert_chat(
+    *,
+    source: ConnectedSource,
+    chat_id: str,
+) -> None:
+    """Bind current Telegram chat as alert destination."""
+
+    metadata = source.metadata or {}
+    current_alert_chat_id = str(metadata.get("alert_chat_id", "")).strip()
+    new_alert_chat_id = str(chat_id).strip()
+
+    if current_alert_chat_id == new_alert_chat_id:
+        text = (
+            "✅ Alerts are already enabled for this chat.\n\n"
+            "Future monitoring alerts will be sent here."
+        )
+
+    elif current_alert_chat_id:
+        text = (
+            "⚠️ Alerts are already configured for another chat.\n\n"
+            "Change Alert destination chat ID in the dashboard if you want to replace it."
+        )
+
+    else:
+        metadata["alert_chat_id"] = new_alert_chat_id
+        source.metadata = metadata
+        source.save(update_fields=["metadata", "updated_at"])
+
+        text = (
+            "✅ Alerts have been enabled for this chat.\n\n"
+            "Future monitoring alerts will be sent here."
+        )
+
+        logger.info(
+            "telegram_alert_chat_auto_bound",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+                "chat_id": new_alert_chat_id,
+            },
+        )
+
+    send_telegram_bot_message(
+        source=source,
+        chat_id=new_alert_chat_id,
+        text=text,
+    )
+
+
+def send_telegram_start_message(
+    *,
+    source: ConnectedSource,
+    chat_id: str,
+) -> None:
+    """Send basic bot start response without enabling alerts."""
+
+    send_telegram_bot_message(
+        source=source,
+        chat_id=chat_id,
+        text=(
+            "✅ Bot is active.\n\n"
+            "Custom text."
+        ),
+    )
+
+
+def send_telegram_bot_message(
+    *,
+    source: ConnectedSource,
+    chat_id: str,
+    text: str,
+) -> None:
+    """Send Telegram service message and log failures safely."""
+
+    try:
+        bot_token = source.get_credentials()
+
+        if not bot_token:
+            logger.warning(
+                "telegram_system_command_reply_skipped_missing_token",
+                extra={
+                    "source_id": source.id,
+                    "profile_id": source.profile_id,
+                    "chat_id": chat_id,
+                },
+            )
+            return
+
+        telegram_send_message(
+            bot_token=bot_token,
+            chat_id=chat_id,
+            text=text,
+        )
+
+    except Exception as exc:
+        logger.warning(
+            "telegram_system_command_reply_failed",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+                "chat_id": chat_id,
+                "error": str(exc)[:1000],
+            },
+        )
 
 
 def parse_telegram_update(update: dict[str, Any]) -> TelegramParsedMessage | None:

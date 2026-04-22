@@ -9,6 +9,7 @@ from apps.core.services.rate_limits import RateLimitPeriod, check_rate_limit
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.models import IncomingMessage
 from apps.monitoring.services.ingestion import build_incoming_message_dedup_key
+from apps.integrations.services.telegram_commands import is_system_command
 
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ def check_telegram_customer_message_limits(
     can handle them idempotently.
     """
 
-    if is_start_command(parsed_message.text):
+    if is_system_command(parsed_message.text):
         return CustomerRateLimitResult(allowed=True)
 
     if is_duplicate_incoming_message(
@@ -239,9 +240,3 @@ def get_cache_ttl(*, key: str, fallback: int) -> int:
         return ttl
 
     return fallback
-
-
-def is_start_command(text: str) -> bool:
-    """Return True for Telegram /start command."""
-
-    return (text or "").strip().lower().startswith("/start")

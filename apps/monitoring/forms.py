@@ -34,8 +34,8 @@ class MonitoringProfileCreateForm(forms.ModelForm):
         required=False,
         max_length=255,
         help_text=(
-            "Optional. Enter Telegram chat ID for alerts or\n"
-            "after profile creation, in Telegram app send `/start` to your bot to enable Alerts. "
+            "Optional. Enter Telegram chat ID for alerts, or after profile creation "
+            "send `/start_alerts` to your bot from the destination chat."
         ),
     )
 

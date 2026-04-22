@@ -7,6 +7,7 @@ from django.utils import timezone
 from apps.alerts.services.telegram_delivery import telegram_send_message
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.models import IncomingMessage
+from apps.integrations.services.telegram_commands import is_system_command
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def maybe_send_telegram_customer_auto_reply(
     if not message.external_chat_id:
         return
 
-    if is_start_command(message.text):
+    if is_system_command(message.text):
         return
 
     if is_alert_chat(
@@ -144,9 +145,3 @@ def is_alert_chat(
     alert_chat_id = str(metadata.get("alert_chat_id", "")).strip()
 
     return bool(alert_chat_id) and alert_chat_id == str(chat_id).strip()
-
-
-def is_start_command(text: str) -> bool:
-    """Return True for Telegram /start command."""
-
-    return (text or "").strip().lower().startswith("/start")
