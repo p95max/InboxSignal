@@ -1,3 +1,4 @@
+from allauth.account.views import LoginView, LogoutView, SignupView
 from django.contrib import admin
 from django.urls import include, path
 
@@ -20,7 +21,13 @@ urlpatterns = [
     ),
     path("events/<uuid:event_id>/<str:action>/", event_action_view, name="event_action"),
 
-    path("accounts/", include("django.contrib.auth.urls")),
+    # Backward-compatible short names used by existing templates.
+    path("accounts/login/", LoginView.as_view(), name="login"),
+    path("accounts/logout/", LogoutView.as_view(), name="logout"),
+    path("accounts/signup/", SignupView.as_view(), name="signup"),
+
+    # django-allauth account + social auth urls.
+    path("accounts/", include("allauth.urls")),
 
     path("admin/", admin.site.urls),
     path("health/", health_check, name="health"),

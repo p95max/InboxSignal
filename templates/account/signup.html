@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+
+{% block title %}Create account | Messaging Monitoring{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Create account</h1>
+    <p>Start with one Telegram monitoring profile.</p>
+</div>
+
+<div class="card auth-card">
+    {% if form.errors %}
+        <div class="form-error-box">
+            Please fix the errors below.
+        </div>
+    {% endif %}
+
+    <form method="post" action="{% provider_login_url 'google' %}" class="auth-social-form">
+        {% csrf_token %}
+        <button class="button button-primary auth-button-full" type="submit">
+            Sign up with Google
+        </button>
+    </form>
+
+    <div class="auth-divider">
+        <span>or</span>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="field">
+            <label for="{{ form.email.id_for_label }}">Email</label>
+            {{ form.email }}
+            {% for error in form.email.errors %}
+                <div class="form-error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="field">
+            <label for="{{ form.password1.id_for_label }}">Password</label>
+            {{ form.password1 }}
+            {% for error in form.password1.errors %}
+                <div class="form-error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="field">
+            <label for="{{ form.password2.id_for_label }}">Repeat password</label>
+            {{ form.password2 }}
+            {% for error in form.password2.errors %}
+                <div class="form-error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <button class="button button-primary auth-button-full" type="submit">
+            Create account
+        </button>
+    </form>
+
+    <p class="auth-switch muted">
+        Already have an account?
+        <a href="{% url 'login' %}">Login</a>
+    </p>
+</div>
+{% endblock %}

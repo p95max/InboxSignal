@@ -287,3 +287,56 @@ input[type="radio"],
         grid-template-columns: 1fr;
     }
 }
+
+.auth-card {
+    max-width: 460px;
+}
+
+.auth-card .field {
+    margin-bottom: 14px;
+}
+
+.auth-card input[type="text"],
+.auth-card input[type="email"],
+.auth-card input[type="password"] {
+    width: 100%;
+}
+
+.auth-button-full {
+    width: 100%;
+    justify-content: center;
+}
+
+.auth-social-form {
+    margin-bottom: 16px;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0;
+    color: var(--muted);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: var(--border);
+}
+
+.auth-switch {
+    margin: 16px 0 0;
+    text-align: center;
+}
+
+.form-error-box {
+    margin-bottom: 16px;
+    padding: 12px;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: var(--radius-md);
+    background: rgba(239, 68, 68, 0.08);
+    color: #fecaca;
+}
