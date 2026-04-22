@@ -1,9 +1,29 @@
 import pytest
+from allauth.account.models import EmailAddress
 
 from apps.accounts.models import User
 from apps.monitoring.models import MonitoringProfile
 
 from django.core.cache import cache
+
+def create_verified_user(
+    *,
+    email: str = "test-user@example.com",
+    password: str = "testpass123",
+):
+    user = User.objects.create_user(
+        email=email,
+        password=password,
+    )
+
+    EmailAddress.objects.create(
+        user=user,
+        email=email,
+        verified=True,
+        primary=True,
+    )
+
+    return user
 
 @pytest.fixture(autouse=True)
 def allow_testserver(settings):
@@ -21,10 +41,19 @@ def clear_cache():
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(
+    user = User.objects.create_user(
         email="test-user@example.com",
         password="testpass123",
     )
+
+    EmailAddress.objects.create(
+        user=user,
+        email=user.email,
+        verified=True,
+        primary=True,
+    )
+
+    return user
 
 
 @pytest.fixture
@@ -32,5 +61,5 @@ def monitoring_profile(user):
     return MonitoringProfile.objects.create(
         owner=user,
         name="Test profile",
-        business_context="Customer support for online orders.",
+        business_context="Test business.",
     )
