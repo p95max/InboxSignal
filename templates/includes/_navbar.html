@@ -1,7 +1,11 @@
+{% load static %}
+
 <header class="topbar">
     <div class="topbar-inner">
         <a class="brand brand-modern" href="{% url 'home' %}" aria-label="InboxSignal home">
-            <span class="brand-mark">IS</span>
+            <span class="brand-mark brand-mark-logo">
+                <img src="{% static 'img/logo.png' %}" alt="InboxSignal logo">
+            </span>
             <span class="brand-text">
                 <span class="brand-title">InboxSignal</span>
                 <span class="brand-subtitle">Message triage & alerts</span>

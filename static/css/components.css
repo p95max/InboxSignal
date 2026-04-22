@@ -784,3 +784,17 @@
     background: rgba(30, 41, 59, 0.95);
     color: var(--text-strong);
 }
+
+.brand-mark-logo {
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+}
+
+.brand-mark-logo img {
+    display: block;
+    width: 42px;
+    height: 42px;
+    object-fit: cover;
+    border-radius: 14px;
+}
