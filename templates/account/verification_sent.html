@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Verify your email | Messaging Monitoring{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Verify your email</h1>
+    <p>We sent a confirmation link to your email address.</p>
+</div>
+
+<section class="card auth-card">
+    <h2>Check your inbox</h2>
+
+    <p class="muted">
+        In local development, the email is printed to the web container logs.
+        Open the confirmation link to activate your account.
+    </p>
+
+    <p class="muted">
+        Run:
+    </p>
+
+    <pre><code>docker compose logs -f web</code></pre>
+
+    <a class="button" href="{% url 'account_login' %}">
+        Back to login
+    </a>
+</section>
+{% endblock %}

@@ -102,6 +102,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.core.context_processors.auth_settings",
             ],
         },
     }
@@ -136,14 +137,16 @@ STATICFILES_DIRS = [
 
 AUTH_USER_MODEL = "accounts.User"
 
+LOGIN_URL = "account_login"
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "home"
+
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
-LOGIN_URL = "account_login"
-LOGIN_REDIRECT_URL = "dashboard"
-LOGOUT_REDIRECT_URL = "home"
+SITE_ID = 1
 
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
@@ -151,10 +154,14 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
 ACCOUNT_EMAIL_VERIFICATION = env(
     "ACCOUNT_EMAIL_VERIFICATION",
-    default="none",
+    default="mandatory",
 )
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+
 ACCOUNT_SIGNUP_REDIRECT_URL = "dashboard"
 ACCOUNT_LOGOUT_REDIRECT_URL = "home"
+
+ACCOUNT_EMAIL_SUBJECT_PREFIX = "[Messaging Monitoring] "
 
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
@@ -166,6 +173,10 @@ SOCIALACCOUNT_EMAIL_VERIFICATION = env(
 
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
 GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", default="")
+
+GOOGLE_AUTH_ENABLED = bool(
+    GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET
+)
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
@@ -179,6 +190,13 @@ SOCIALACCOUNT_PROVIDERS = {
         "OAUTH_PKCE_ENABLED": True,
     }
 }
+
+if GOOGLE_AUTH_ENABLED:
+    SOCIALACCOUNT_PROVIDERS["google"]["APP"] = {
+        "client_id": GOOGLE_OAUTH_CLIENT_ID,
+        "secret": GOOGLE_OAUTH_CLIENT_SECRET,
+        "key": "",
+    }
 
 if GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET:
     SOCIALACCOUNT_PROVIDERS["google"]["APP"] = {

@@ -4,63 +4,67 @@
 {% block title %}Login | Messaging Monitoring{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Login</h1>
-    <p>Use Google or your account email and password.</p>
-</div>
-
-<div class="card auth-card">
-    {% if form.errors %}
-        <div class="form-error-box">
-            Invalid email or password.
-        </div>
-    {% endif %}
-
-    <form method="post" action="{% provider_login_url 'google' %}" class="auth-social-form">
-        {% csrf_token %}
-        <button class="button button-primary auth-button-full" type="submit">
-            Continue with Google
-        </button>
-    </form>
-
-    <div class="auth-divider">
-        <span>or</span>
+<div class="auth-page">
+    <div class="page-header auth-page-header">
+        <h1>Login</h1>
+        <p>Use Google or your account email and password.</p>
     </div>
 
-    <form method="post">
-        {% csrf_token %}
-
-        <div class="field">
-            <label for="{{ form.login.id_for_label }}">Email</label>
-            {{ form.login }}
-            {% for error in form.login.errors %}
-                <div class="form-error">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <div class="field">
-            <label for="{{ form.password.id_for_label }}">Password</label>
-            {{ form.password }}
-            {% for error in form.password.errors %}
-                <div class="form-error">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        {% if form.remember %}
-            <label class="checkbox-row" for="{{ form.remember.id_for_label }}">
-                {{ form.remember }}
-                <span>Remember me</span>
-            </label>
+    <div class="card auth-card">
+        {% if form.errors %}
+            <div class="form-error-box">
+                Invalid email or password.
+            </div>
         {% endif %}
 
-        <button class="button button-primary auth-button-full" type="submit">
-            Login
-        </button>
-    </form>
+        {% if GOOGLE_AUTH_ENABLED %}
+            <form method="post" action="{% provider_login_url 'google' %}" class="auth-social-form">
+                {% csrf_token %}
+                <button class="button button-primary auth-button-full" type="submit">
+                    Continue with Google
+                </button>
+            </form>
 
-    <p class="auth-switch muted">
-        No account yet?
-        <a href="{% url 'signup' %}">Create account</a>
-    </p>
+            <div class="auth-divider">
+                <span>or</span>
+            </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="field">
+                <label for="{{ form.login.id_for_label }}">Email</label>
+                {{ form.login }}
+                {% for error in form.login.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="field">
+                <label for="{{ form.password.id_for_label }}">Password</label>
+                {{ form.password }}
+                {% for error in form.password.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            {% if form.remember %}
+                <label class="checkbox-row" for="{{ form.remember.id_for_label }}">
+                    {{ form.remember }}
+                    <span>Remember me</span>
+                </label>
+            {% endif %}
+
+            <button class="button button-primary auth-button-full" type="submit">
+                Login
+            </button>
+        </form>
+
+        <p class="auth-switch muted">
+            No account yet?
+            <a href="{% url 'signup' %}">Create account</a>
+        </p>
+    </div>
 </div>
 {% endblock %}
