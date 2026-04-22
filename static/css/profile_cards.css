@@ -19,26 +19,32 @@
 .profile-card-header {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     gap: 16px;
 }
 
 .profile-card-title {
     display: flex;
+    flex: 1;
     flex-direction: column;
     gap: 10px;
     min-width: 0;
 }
 
 .profile-name {
+    display: inline-block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
     color: var(--text-strong);
     font-size: 18px;
     font-weight: 800;
     line-height: 1.25;
+    letter-spacing: -0.02em;
     text-decoration: none;
 }
 
 .profile-name:hover {
-    color: var(--primary);
+    color: var(--primary-hover);
 }
 
 .profile-status-row {
@@ -80,11 +86,24 @@
     font-weight: 700;
 }
 
+.profile-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.profile-card-actions .button {
+    white-space: nowrap;
+}
+
 .profile-card-actions-bottom {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     align-items: center;
+    margin-top: auto;
     padding-top: 16px;
     border-top: 1px solid var(--border);
 }
@@ -92,11 +111,6 @@
 .profile-card-actions-bottom .button,
 .profile-card-actions-bottom button {
     min-height: 38px;
-}
-
-.inline-form {
-    display: inline-flex;
-    margin: 0;
 }
 
 .profile-card-disabled {

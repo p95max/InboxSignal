@@ -1,5 +1,5 @@
 /* =========================
-   1. Design tokens
+   Design tokens
    ========================= */
 
 :root {
@@ -7,10 +7,12 @@
     --bg-soft: #11182b;
     --card: #151d31;
     --card-hover: #19233a;
+
     --text: #e8edf7;
     --text-strong: #ffffff;
     --muted: #93a4bd;
     --muted-soft: #65748b;
+
     --border: rgba(148, 163, 184, 0.18);
 
     --primary: #4f8cff;

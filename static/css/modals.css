@@ -1,0 +1,149 @@
+/* =========================
+   Native dialog modal
+   ========================= */
+
+.app-modal {
+    width: min(920px, calc(100vw - 32px));
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-lg);
+    background: transparent;
+    color: var(--text);
+}
+
+.app-modal::backdrop {
+    background: rgba(0, 0, 0, 0.68);
+    backdrop-filter: blur(8px);
+}
+
+.app-modal-card {
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    box-shadow: var(--shadow);
+}
+
+.app-modal-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+
+/* =========================
+   Account settings modal
+   ========================= */
+
+body.modal-open {
+    overflow: hidden;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: none;
+}
+
+.modal.is-open {
+    display: block;
+}
+
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: rgba(2, 6, 23, 0.72);
+    backdrop-filter: blur(4px);
+}
+
+.modal-dialog {
+    position: relative;
+    z-index: 2;
+    width: min(100% - 32px, 520px);
+    margin: 80px auto;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 18px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)),
+        #0f172a;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+    pointer-events: auto;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px 24px 18px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.modal-header h2 {
+    margin: 0 0 6px;
+    color: var(--text-strong);
+    line-height: 1.1;
+}
+
+.modal-header p {
+    margin: 0;
+}
+
+.modal-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    margin-top: -2px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.82);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    border-color: rgba(148, 163, 184, 0.34);
+    background: rgba(30, 41, 59, 0.95);
+    color: var(--text-strong);
+}
+
+.modal-body {
+    padding: 22px 24px 24px;
+}
+
+.account-settings-section + .account-settings-section {
+    margin-top: 24px;
+}
+
+.account-settings-section h3 {
+    margin: 0 0 12px;
+    color: var(--text-strong);
+}
+
+.account-settings-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.danger-zone {
+    padding-top: 20px;
+    border-top: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.danger-zone h3 {
+    color: #fca5a5;
+}
+
+.account-delete-form {
+    margin-top: 16px;
+}

@@ -1,5 +1,5 @@
 /* =========================
-   17. Responsive
+   Responsive
    ========================= */
 
 @media (max-width: 1100px) {
@@ -56,11 +56,7 @@
         align-items: stretch;
     }
 
-    .nav-actions {
-        width: 100%;
-        justify-content: space-between;
-    }
-
+    .nav-actions,
     .nav-actions-modern {
         width: 100%;
         justify-content: flex-start;
@@ -151,6 +147,44 @@
     }
 }
 
+@media (max-width: 640px) {
+    .auth-page {
+        max-width: 100%;
+        padding: 32px 0 56px;
+    }
+
+    .auth-card {
+        padding: 20px;
+    }
+
+    .landing-profile-preview-card,
+    .landing-event-preview-card {
+        min-height: auto;
+    }
+
+    .landing-event-compact-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .landing-event-compact-footer div {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .landing-event-compact-footer strong {
+        text-align: left;
+    }
+
+    .modal-dialog {
+        margin: 48px auto;
+    }
+
+    .modal-header,
+    .modal-body {
+        padding: 20px;
+    }
+}
+
 @media (max-width: 480px) {
     .topbar-inner {
         padding: 14px 16px;
@@ -200,5 +234,11 @@
     .category-stats,
     .archive-decision-stats {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 420px) {
+    .recommended-badge {
+        display: none;
     }
 }

@@ -1,5 +1,5 @@
 /* =========================
-   2. Base
+   Base document styles
    ========================= */
 
 * {
@@ -53,7 +53,7 @@ label {
 
 
 /* =========================
-   15. Bootstrap overrides
+   Bootstrap overrides
    ========================= */
 
 .bg-light,
@@ -99,7 +99,7 @@ label {
 
 
 /* =========================
-   16. Scrollbar
+   Scrollbar
    ========================= */
 
 ::-webkit-scrollbar {

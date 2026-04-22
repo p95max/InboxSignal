@@ -1,5 +1,5 @@
 /* =========================
-   12. Events
+   Event list
    ========================= */
 
 .event-list {
@@ -55,7 +55,7 @@
 
 
 /* =========================
-   13. Event workflow states
+   Event workflow states
    ========================= */
 
 .event-card.status-new {
@@ -149,6 +149,11 @@
     filter: grayscale(0.55);
 }
 
+
+/* =========================
+   Triage states
+   ========================= */
+
 .triage-state {
     display: inline-flex;
     align-items: center;
@@ -186,7 +191,11 @@
     color: var(--muted-soft);
     font-size: 13px;
 }
-/* Event summary block */
+
+
+/* =========================
+   Event summary block
+   ========================= */
 
 .event-summary {
     margin-top: 2px;
@@ -206,49 +215,10 @@
     border: 1px solid rgba(79, 140, 255, 0.20);
     border-radius: var(--radius-sm);
     background:
-        linear-gradient(
-            180deg,
-            rgba(79, 140, 255, 0.055),
-            rgba(255, 255, 255, 0.012)
-        ),
+        linear-gradient(180deg, rgba(79, 140, 255, 0.055), rgba(255, 255, 255, 0.012)),
         rgba(8, 13, 27, 0.58);
     color: #cfe0f6;
     font-size: 14px;
     line-height: 1.45;
     white-space: normal;
 }
-
-.landing-event-note,
-.landing-event-message {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
-}
-
-.landing-event-note p,
-.landing-event-message p {
-    margin: 0.35rem 0 0;
-    font-size: 0.95rem;
-    line-height: 1.5;
-}
-
-.landing-event-footer {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
-}
-
-.landing-event-footer span,
-.landing-event-footer strong {
-    display: block;
-}
-
-@media (max-width: 640px) {
-    .landing-event-footer {
-        grid-template-columns: 1fr;
-    }
-}
-
