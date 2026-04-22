@@ -10,6 +10,7 @@ if [ "$RUN_MIGRATIONS" = "1" ]; then
 import os
 
 from django.contrib.auth import get_user_model
+from allauth.account.models import EmailAddress
 
 
 email = os.getenv("DJANGO_SUPERUSER_EMAIL")
@@ -64,6 +65,40 @@ elif changed:
     print(f"Superuser updated: {lookup_value}")
 else:
     print(f"Superuser already exists: {lookup_value}")
+
+# Ensure allauth email verification state for admin user.
+EmailAddress.objects.filter(user=user, primary=True).exclude(email=email).update(
+    primary=False
+)
+
+email_address, email_created = EmailAddress.objects.get_or_create(
+    user=user,
+    email=email,
+    defaults={
+        "verified": True,
+        "primary": True,
+    },
+)
+
+email_changed = False
+
+if not email_address.verified:
+    email_address.verified = True
+    email_changed = True
+
+if not email_address.primary:
+    email_address.primary = True
+    email_changed = True
+
+if email_changed:
+    email_address.save(update_fields=["verified", "primary"])
+
+if email_created:
+    print(f"Superuser email verified: {email}")
+elif email_changed:
+    print(f"Superuser email verification updated: {email}")
+else:
+    print(f"Superuser email already verified: {email}")
 PY
   fi
 fi
