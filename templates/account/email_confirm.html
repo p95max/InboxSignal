@@ -3,31 +3,37 @@
 {% block title %}Confirm email | Messaging Monitoring{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Confirm email address</h1>
-    <p>Activate your account by confirming this email address.</p>
+<div class="auth-page">
+    <div class="page-header auth-page-header">
+        <h1>Confirm email address</h1>
+        <p>Activate your account by confirming this email address.</p>
+    </div>
+
+    <section class="card auth-card">
+        {% if confirmation %}
+            <h2>Email confirmation</h2>
+
+            <p class="muted">
+                Please confirm that this email address belongs to you.
+            </p>
+
+            <form method="post" action="{{ request.path }}">
+                {% csrf_token %}
+                <button class="button button-primary auth-button-full" type="submit">
+                    Confirm email and activate account
+                </button>
+            </form>
+        {% else %}
+            <h2>Invalid confirmation link</h2>
+
+            <p class="muted">
+                This confirmation link is invalid or has expired.
+            </p>
+
+            <a class="button button-primary auth-button-full" href="{% url 'account_login' %}">
+                Back to login
+            </a>
+        {% endif %}
+    </section>
 </div>
-
-<section class="card auth-card">
-    {% if confirmation %}
-        <p class="muted">
-            Please confirm that this email address belongs to you.
-        </p>
-
-        <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
-            {% csrf_token %}
-            <button class="button button-primary auth-button-full" type="submit">
-                Confirm email and activate account
-            </button>
-        </form>
-    {% else %}
-        <p class="muted">
-            This confirmation link is invalid or has expired.
-        </p>
-
-        <a class="button button-primary" href="{% url 'account_email' %}">
-            Request a new confirmation email
-        </a>
-    {% endif %}
-</section>
 {% endblock %}

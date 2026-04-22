@@ -1,0 +1,11 @@
+Hello,
+
+Please confirm your email address for Messaging Monitoring.
+
+Confirmation link:
+
+{{ activate_url }}
+
+This link is valid for a limited time.
+
+Messaging Monitoring

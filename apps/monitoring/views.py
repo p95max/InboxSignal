@@ -10,6 +10,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from allauth.account.decorators import verified_email_required
+
 from apps.core.services.rate_limits import RateLimitPeriod, check_rate_limit
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.forms import MonitoringProfileCreateForm, MonitoringProfileUpdateForm
@@ -21,7 +23,7 @@ from apps.ai.services.usage import (
 )
 
 
-@login_required
+@verified_email_required
 def dashboard_view(request):
     """Show dashboard and allow creating a monitoring profile."""
 
@@ -180,7 +182,7 @@ def filter_archived_events_by_decision(events, decision: str):
 
     return events
 
-@login_required
+@verified_email_required
 def profile_detail_view(request, profile_id: int):
     """Show events for one monitoring profile owned by the current user."""
 
@@ -531,7 +533,7 @@ def profile_detail_view(request, profile_id: int):
     )
 
 
-@login_required
+@verified_email_required
 @require_POST
 def profile_delete_view(request, profile_id: int):
     """Delete a monitoring profile owned by the current user."""
@@ -557,7 +559,7 @@ def profile_delete_view(request, profile_id: int):
 
     return redirect("dashboard")
 
-@login_required
+@verified_email_required
 def profile_update_view(request, profile_id: int):
     """Update a monitoring profile owned by the current user."""
 
@@ -600,7 +602,7 @@ def profile_update_view(request, profile_id: int):
     )
 
 
-@login_required
+@verified_email_required
 @require_POST
 def event_action_view(request, event_id, action: str):
     """Change event status from the UI with strict owner isolation."""
