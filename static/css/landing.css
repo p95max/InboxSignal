@@ -154,214 +154,33 @@
     letter-spacing: -0.035em;
 }
 
-
-/* =========================
-   Landing preview carousel
-   ========================= */
-
-.landing-preview-carousel {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    min-width: 0;
-}
-
-.landing-carousel-viewport {
-    overflow: hidden;
-    border-radius: var(--radius-lg);
-}
-
-.landing-carousel-track {
-    display: flex;
-    width: 200%;
-    animation: landingPreviewCarousel 9s ease-in-out infinite;
-}
-
-.landing-preview-carousel:hover .landing-carousel-track {
-    animation-play-state: paused;
-}
-
-.landing-preview-slide {
-    width: 50%;
-    min-width: 50%;
-}
-
-@keyframes landingPreviewCarousel {
-    0%,
-    42% {
-        transform: translateX(0);
+@media (max-width: 900px) {
+    .landing-hero {
+        grid-template-columns: 1fr;
+        min-height: auto;
     }
 
-    50%,
-    92% {
-        transform: translateX(-50%);
-    }
-
-    100% {
-        transform: translateX(0);
+    .landing-hero-content {
+        max-width: 100%;
     }
 }
 
-.landing-carousel-dots {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-}
-
-.landing-carousel-dots span {
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-    background: rgba(148, 163, 184, 0.35);
-}
-
-.landing-carousel-dots span:first-child {
-    animation: landingDotOne 9s ease-in-out infinite;
-}
-
-.landing-carousel-dots span:last-child {
-    animation: landingDotTwo 9s ease-in-out infinite;
-}
-
-@keyframes landingDotOne {
-    0%,
-    42%,
-    100% {
-        background: #aac7ff;
-        transform: scale(1.2);
+@media (max-width: 640px) {
+    .landing-hero {
+        gap: 22px;
+        padding: 26px 0 20px;
     }
 
-    50%,
-    92% {
-        background: rgba(148, 163, 184, 0.35);
-        transform: scale(1);
-    }
-}
-
-@keyframes landingDotTwo {
-    0%,
-    42%,
-    100% {
-        background: rgba(148, 163, 184, 0.35);
-        transform: scale(1);
+    .landing-hero h1 {
+        font-size: clamp(36px, 12vw, 54px);
     }
 
-    50%,
-    92% {
-        background: #aac7ff;
-        transform: scale(1.2);
+    .landing-lead {
+        font-size: 16px;
     }
-}
 
-.landing-profile-preview-card,
-.landing-event-preview-card {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    min-height: 520px;
-    padding: 20px;
-}
-
-.landing-profile-preview-card h2,
-.landing-event-preview-card h2 {
-    margin: 0;
-    color: var(--text-strong);
-    font-size: 22px;
-    line-height: 1.2;
-    font-weight: 850;
-    letter-spacing: -0.035em;
-}
-
-.landing-profile-section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-}
-
-.landing-profile-section-title {
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 850;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.landing-profile-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.landing-profile-last-event {
-    display: flex;
-    gap: 8px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-    font-size: 14px;
-}
-
-.landing-profile-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: auto;
-    padding-top: 14px;
-    border-top: 1px solid var(--border);
-}
-
-.landing-event-compact-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-}
-
-.landing-event-compact-grid div {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    padding: 11px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: rgba(8, 13, 27, 0.46);
-}
-
-.landing-event-compact-note,
-.landing-event-compact-message {
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-}
-
-.landing-event-compact-note p,
-.landing-event-compact-message p {
-    margin: 5px 0 0;
-    color: var(--text);
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.landing-event-compact-footer {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-}
-
-.landing-event-compact-footer div {
-    display: flex;
-    justify-content: space-between;
-    gap: 14px;
-}
-
-.landing-event-compact-footer strong {
-    text-align: right;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .landing-carousel-track,
-    .landing-carousel-dots span {
-        animation: none;
+    .landing-final-cta {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }
