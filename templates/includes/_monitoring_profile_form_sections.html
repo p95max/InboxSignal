@@ -111,6 +111,94 @@
     </div>
 </div>
 
+<div class="form-section">
+    <div class="form-section-label">What to ignore</div>
+
+    <div class="checkbox-grid">
+        {% if form.ignore_greetings %}
+            <label class="checkbox-row">
+                {{ form.ignore_greetings }}
+                <span>{{ form.ignore_greetings.label }}</span>
+            </label>
+        {% endif %}
+
+        {% if form.ignore_short_replies %}
+            <label class="checkbox-row">
+                {{ form.ignore_short_replies }}
+                <span>{{ form.ignore_short_replies.label }}</span>
+            </label>
+        {% endif %}
+
+        {% if form.ignore_emojis %}
+            <label class="checkbox-row">
+                {{ form.ignore_emojis }}
+                <span>{{ form.ignore_emojis.label }}</span>
+            </label>
+        {% endif %}
+    </div>
+</div>
+
+<div class="form-section">
+    <div class="form-section-label">What is urgent</div>
+
+    <div class="checkbox-grid">
+        {% if form.urgent_negative %}
+            <label class="checkbox-row">
+                {{ form.urgent_negative }}
+                <span>{{ form.urgent_negative.label }}</span>
+            </label>
+        {% endif %}
+
+        {% if form.urgent_deadlines %}
+            <label class="checkbox-row">
+                {{ form.urgent_deadlines }}
+                <span>{{ form.urgent_deadlines.label }}</span>
+            </label>
+        {% endif %}
+
+        {% if form.urgent_repeated_messages %}
+            <label class="checkbox-row">
+                {{ form.urgent_repeated_messages }}
+                <span>{{ form.urgent_repeated_messages.label }}</span>
+            </label>
+        {% endif %}
+    </div>
+</div>
+
+<div class="form-section">
+    <div class="form-section-label">What to extract</div>
+
+    <div class="checkbox-grid">
+        {% if form.extract_name %}
+            <label class="checkbox-row">
+                {{ form.extract_name }}
+                <span>{{ form.extract_name.label }}</span>
+            </label>
+        {% endif %}
+
+        {% if form.extract_contact %}
+            <label class="checkbox-row">
+                {{ form.extract_contact }}
+                <span>{{ form.extract_contact.label }}</span>
+            </label>
+        {% endif %}
+
+        {% if form.extract_budget %}
+            <label class="checkbox-row">
+                {{ form.extract_budget }}
+                <span>{{ form.extract_budget.label }}</span>
+            </label>
+        {% endif %}
+
+        {% if form.extract_product_or_service %}
+            <label class="checkbox-row">
+                {{ form.extract_product_or_service }}
+                <span>{{ form.extract_product_or_service.label }}</span>
+            </label>
+        {% endif %}
+    </div>
+</div>
+
 {% if show_connection_fields %}
     <div class="form-section">
         <div class="form-section-label">Telegram connection</div>

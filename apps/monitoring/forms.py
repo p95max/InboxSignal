@@ -13,8 +13,146 @@ from apps.monitoring.models import MonitoringProfile
 TELEGRAM_BOT_TOKEN_RE = re.compile(r"^\d{5,}:[A-Za-z0-9_-]{20,}$")
 TELEGRAM_CHAT_ID_RE = re.compile(r"^-?\d+$|^@[A-Za-z0-9_]{5,}$")
 
+TRACK_FIELDS = (
+    "track_leads",
+    "track_complaints",
+    "track_requests",
+    "track_urgent",
+    "track_general_activity",
+)
 
-class MonitoringProfileCreateForm(forms.ModelForm):
+IGNORE_FIELDS = (
+    "ignore_greetings",
+    "ignore_short_replies",
+    "ignore_emojis",
+)
+
+URGENCY_FIELDS = (
+    "urgent_negative",
+    "urgent_deadlines",
+    "urgent_repeated_messages",
+)
+
+EXTRACTION_FIELDS = (
+    "extract_name",
+    "extract_contact",
+    "extract_budget",
+    "extract_product_or_service",
+)
+
+PROFILE_CONSTRUCTOR_FIELDS = (
+    "name",
+    "scenario",
+    "business_context",
+    *TRACK_FIELDS,
+    *IGNORE_FIELDS,
+    *URGENCY_FIELDS,
+    *EXTRACTION_FIELDS,
+)
+
+TEXT_LIKE_FIELDS = (
+    "name",
+    "scenario",
+    "status",
+    "business_context",
+    "telegram_bot_token",
+    "alert_chat_id",
+    "ai_daily_call_limit",
+)
+
+FIELD_LABELS = {
+    "track_leads": "Leads",
+    "track_complaints": "Complaints",
+    "track_requests": "Requests / bookings",
+    "track_urgent": "Urgent messages",
+    "track_general_activity": "General activity",
+    "ignore_greetings": "Greetings",
+    "ignore_short_replies": "Short replies",
+    "ignore_emojis": "Emoji-only messages",
+    "urgent_negative": "Negative messages",
+    "urgent_deadlines": "Deadline / time-sensitive messages",
+    "urgent_repeated_messages": "Repeated follow-up messages",
+    "extract_name": "Name",
+    "extract_contact": "Contact",
+    "extract_budget": "Budget",
+    "extract_product_or_service": "Product or service",
+}
+
+
+class MonitoringProfileConstructorMixin:
+    """Shared constructor fields and UI setup for create/update forms."""
+
+    constructor_fields = (
+        *PROFILE_CONSTRUCTOR_FIELDS,
+        "alert_chat_id",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._apply_widget_classes()
+        self._apply_labels()
+        self._apply_help_texts()
+
+    def _apply_widget_classes(self) -> None:
+        for field_name in TEXT_LIKE_FIELDS:
+            field = self.fields.get(field_name)
+
+            if field is None:
+                continue
+
+            field.widget.attrs.setdefault("class", "form-control")
+
+    def _apply_labels(self) -> None:
+        for field_name, label in FIELD_LABELS.items():
+            field = self.fields.get(field_name)
+
+            if field is not None:
+                field.label = label
+
+    def _apply_help_texts(self) -> None:
+        business_context = self.fields.get("business_context")
+        if business_context:
+            business_context.help_text = (
+                "Optional plain text business context, max 300 characters."
+            )
+
+        scenario = self.fields.get("scenario")
+        if scenario:
+            scenario.help_text = (
+                "Choose a preset scenario or switch to Custom for manual control."
+            )
+
+        alert_chat_id = self.fields.get("alert_chat_id")
+        if alert_chat_id:
+            alert_chat_id.help_text = (
+                "Optional. Enter Telegram chat ID for alerts, or after profile creation "
+                "send `/start_alerts` to your bot from the destination chat."
+            )
+
+    def clean_business_context(self):
+        value = self.cleaned_data.get("business_context", "")
+
+        if value is None:
+            return ""
+
+        return value.strip()
+
+    def clean_alert_chat_id(self):
+        value = self.cleaned_data.get("alert_chat_id", "").strip()
+
+        if value and not TELEGRAM_CHAT_ID_RE.match(value):
+            raise forms.ValidationError(
+                "Enter a numeric Telegram chat ID or @channelusername."
+            )
+
+        return value
+
+
+class MonitoringProfileCreateForm(
+    MonitoringProfileConstructorMixin,
+    forms.ModelForm,
+):
     """Create a monitoring profile and connect a Telegram bot source."""
 
     telegram_bot_token = forms.CharField(
@@ -33,24 +171,11 @@ class MonitoringProfileCreateForm(forms.ModelForm):
         label="Alert destination chat ID",
         required=False,
         max_length=255,
-        help_text=(
-            "Optional. Enter Telegram chat ID for alerts, or after profile creation "
-            "send `/start_alerts` to your bot from the destination chat."
-        ),
     )
 
     class Meta:
         model = MonitoringProfile
-        fields = (
-            "name",
-            "scenario",
-            "business_context",
-            "track_leads",
-            "track_complaints",
-            "track_requests",
-            "track_urgent",
-            "track_general_activity",
-        )
+        fields = PROFILE_CONSTRUCTOR_FIELDS
         widgets = {
             "business_context": forms.Textarea(
                 attrs={
@@ -59,19 +184,8 @@ class MonitoringProfileCreateForm(forms.ModelForm):
                     "placeholder": "Example: We sell used cars in Germany.",
                 }
             ),
+            "scenario": forms.Select(),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        for field_name in (
-            "name",
-            "scenario",
-            "business_context",
-            "telegram_bot_token",
-            "alert_chat_id",
-        ):
-            self.fields[field_name].widget.attrs.setdefault("class", "form-control")
 
     def clean(self):
         cleaned_data = super().clean()
@@ -93,16 +207,6 @@ class MonitoringProfileCreateForm(forms.ModelForm):
             raise forms.ValidationError("Enter a valid Telegram bot token.")
 
         return token
-
-    def clean_alert_chat_id(self):
-        value = self.cleaned_data.get("alert_chat_id", "").strip()
-
-        if value and not TELEGRAM_CHAT_ID_RE.match(value):
-            raise forms.ValidationError(
-                "Enter a numeric Telegram chat ID or @channelusername."
-            )
-
-        return value
 
     @transaction.atomic
     def save(self, *, owner):
@@ -137,17 +241,17 @@ class MonitoringProfileCreateForm(forms.ModelForm):
         return profile
 
 
-
-class MonitoringProfileUpdateForm(forms.ModelForm):
+class MonitoringProfileUpdateForm(
+    MonitoringProfileConstructorMixin,
+    forms.ModelForm,
+):
     """Update editable monitoring profile settings."""
 
     alert_chat_id = forms.CharField(
         required=False,
         label="Alert destination chat ID",
-        help_text="Optional. Change Telegram chat ID for alerts.",
         widget=forms.TextInput(
             attrs={
-                "class": "form-control",
                 "placeholder": "Example: 330297984 or @channelusername",
             }
         ),
@@ -157,14 +261,9 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
         required=False,
         min_value=1,
         label="AI daily call limit",
-        help_text=(
-            "Optional. Leave empty to disable the profile-level AI limit. "
-            "The profile will use the account-level daily AI quota."
-        ),
         widget=forms.NumberInput(
             attrs={
-                "class": "form-control",
-                "placeholder": " ⚠️ No profile AI limit",
+                "placeholder": "No profile AI limit",
                 "min": 1,
             }
         ),
@@ -172,35 +271,27 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
 
     class Meta:
         model = MonitoringProfile
-        fields = [
+        fields = (
             "name",
             "scenario",
             "status",
             "business_context",
-            "track_leads",
-            "track_complaints",
-            "track_requests",
-            "track_urgent",
-            "track_general_activity",
+            *TRACK_FIELDS,
+            *IGNORE_FIELDS,
+            *URGENCY_FIELDS,
+            *EXTRACTION_FIELDS,
             "ai_daily_call_limit",
-        ]
+        )
         widgets = {
             "name": forms.TextInput(
                 attrs={
-                    "class": "form-control",
                     "placeholder": "Example: Car sales monitoring",
                 }
             ),
-            "scenario": forms.Select(attrs={"class": "form-control"}),
-            "status": forms.Select(attrs={"class": "form-control"}),
-            "track_leads": forms.CheckboxInput(),
-            "track_complaints": forms.CheckboxInput(),
-            "track_requests": forms.CheckboxInput(),
-            "track_urgent": forms.CheckboxInput(),
-            "track_general_activity": forms.CheckboxInput(),
+            "scenario": forms.Select(),
+            "status": forms.Select(),
             "business_context": forms.Textarea(
                 attrs={
-                    "class": "form-control",
                     "rows": 4,
                     "placeholder": "Short business context for better analysis.",
                 }
@@ -249,7 +340,7 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
         return value
 
     def save(self, commit=True):
-        profile = super().save(commit)
+        profile = super().save(commit=commit)
 
         alert_chat_id = self.cleaned_data.get("alert_chat_id", "").strip()
 
@@ -266,7 +357,6 @@ class MonitoringProfileUpdateForm(forms.ModelForm):
             source.save(update_fields=["metadata", "updated_at"])
 
         return profile
-
 
 
 def extract_bot_id_from_token(token: str) -> str:
