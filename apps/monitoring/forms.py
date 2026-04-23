@@ -8,7 +8,7 @@ from django.db import transaction
 
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.models import MonitoringProfile
-from apps.monitoring.services.scenario_presets import get_scenario_presets_for_ui
+from apps.monitoring.services.scenario_presets import get_scenario_preset
 
 
 TELEGRAM_BOT_TOKEN_RE = re.compile(r"^\d{5,}:[A-Za-z0-9_-]{20,}$")
@@ -155,7 +155,7 @@ class MonitoringProfileConstructorMixin:
         if profile.scenario == MonitoringProfile.Scenario.CUSTOM:
             return
 
-        preset = get_scenario_presets_for_ui(profile.scenario)
+        preset = get_scenario_preset(profile.scenario)
 
         for field_name, value in preset.items():
             # If the field exists in the form and the user explicitly changed it,

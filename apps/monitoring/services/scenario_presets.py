@@ -97,24 +97,6 @@ def get_scenario_preset(scenario: str) -> dict:
     return SCENARIO_PRESETS.get(scenario, {}).copy()
 
 
-def apply_scenario_preset(
-    *,
-    scenario: str,
-    data: dict,
-    overwrite: bool = False,
-) -> dict:
-    """Apply preset values to a dict-like payload."""
-
-    preset = get_scenario_preset(scenario)
-    result = dict(data)
-
-    for field_name, value in preset.items():
-        if overwrite or field_name not in result:
-            result[field_name] = value
-
-    return result
-
-
 def get_scenario_presets_for_ui() -> dict[str, dict]:
     """Return all scenario presets in a template-friendly format."""
 
