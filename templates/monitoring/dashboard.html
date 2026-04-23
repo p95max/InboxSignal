@@ -150,7 +150,7 @@
                     <span>Last event:</span>
                     <strong>
                         {% if profile.last_event_at %}
-                            {{ profile.last_event_at|localtime|date:"Y-m-d H:i" }}
+                            {{ profile.last_event_at|localtime|date:"d-m-Y H:i" }}
                         {% else %}
                             no events yet
                         {% endif %}
