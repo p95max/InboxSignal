@@ -3,6 +3,7 @@ import logging
 from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
+from datetime import timedelta
 
 from apps.ai.models import AIAnalysisResult
 from apps.ai.services.analyzer import (
@@ -19,6 +20,8 @@ from apps.monitoring.services.rules import RuleAnalysisResult, analyze_message_b
 logger = logging.getLogger(__name__)
 
 MESSAGE_PROCESSING_LOCK_TTL_SECONDS = 120
+REPEATED_MESSAGE_WINDOW_MINUTES = 30
+REPEATED_MESSAGE_THRESHOLD = 2
 
 
 def process_incoming_message(message_id: str) -> Event | None:
@@ -74,6 +77,11 @@ def process_incoming_message(message_id: str) -> Event | None:
         analysis = analyze_message_by_rules(
             text=message.text,
             profile=message.profile,
+        )
+
+        analysis = apply_repeated_message_urgency(
+            message=message,
+            analysis=analysis,
         )
 
         detection_source = Event.DetectionSource.RULES
@@ -162,6 +170,73 @@ def get_message_for_analysis(message_id: str) -> IncomingMessage:
         IncomingMessage.objects.select_related("profile")
         .prefetch_related("events")
         .get(id=message_id)
+    )
+
+
+def apply_repeated_message_urgency(
+    *,
+    message: IncomingMessage,
+    analysis: RuleAnalysisResult,
+) -> RuleAnalysisResult:
+    """Escalate repeated contact messages when profile setting is enabled."""
+
+    profile = message.profile
+
+    if not profile.urgent_repeated_messages:
+        return analysis
+
+    if not profile.track_urgent:
+        return analysis
+
+    if analysis.priority_score <= 0:
+        return analysis
+
+    if not has_recent_repeated_messages(message=message):
+        return analysis
+
+    matched_rules = list(analysis.rule_metadata.get("matched_rules", []))
+
+    if "profile_urgent_repeated_messages" not in matched_rules:
+        matched_rules.append("profile_urgent_repeated_messages")
+
+    rule_metadata = {
+        **analysis.rule_metadata,
+        "matched_rules": matched_rules,
+        "repeated_message": {
+            "enabled": True,
+            "window_minutes": REPEATED_MESSAGE_WINDOW_MINUTES,
+            "threshold": REPEATED_MESSAGE_THRESHOLD,
+            "external_contact_id": message.external_contact_id,
+        },
+    }
+
+    return RuleAnalysisResult(
+        category=analysis.category,
+        priority_score=max(analysis.priority_score, 85),
+        summary=analysis.summary,
+        extracted_data=analysis.extracted_data,
+        rule_metadata=rule_metadata,
+        should_create_event=analysis.should_create_event,
+    )
+
+
+def has_recent_repeated_messages(*, message: IncomingMessage) -> bool:
+    """Return True when the same external contact recently sent multiple messages."""
+
+    if message.external_contact_id is None:
+        return False
+
+    since = timezone.now() - timedelta(minutes=REPEATED_MESSAGE_WINDOW_MINUTES)
+
+    return (
+        IncomingMessage.objects.filter(
+            profile_id=message.profile_id,
+            external_contact_id=message.external_contact_id,
+            received_at__gte=since,
+        )
+        .exclude(id=message.id)
+        .count()
+        >= REPEATED_MESSAGE_THRESHOLD
     )
 
 
