@@ -77,6 +77,14 @@ class ConnectedSource(models.Model):
         blank=True,
         help_text=_("Optional secret for validating incoming webhook requests."),
     )
+    webhook_secret_token = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text=_(
+            "Telegram webhook secret token used in "
+            "X-Telegram-Bot-Api-Secret-Token header."
+        ),
+    )
 
     last_sync_at = models.DateTimeField(null=True, blank=True)
     last_error_at = models.DateTimeField(null=True, blank=True)

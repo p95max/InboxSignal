@@ -17,10 +17,19 @@ class ConnectedSourceAdminForm(forms.ModelForm):
         widget=forms.PasswordInput(render_value=False),
         help_text="Write-only field. Leave empty to keep existing webhook secret.",
     )
+    new_webhook_secret_token = forms.CharField(
+        required=False,
+        label="Webhook secret token",
+        widget=forms.PasswordInput(render_value=False),
+        help_text="Write-only field. Leave empty to keep existing webhook secret token.",
+    )
 
     class Meta:
         model = ConnectedSource
-        exclude = ("webhook_secret",)
+        exclude = (
+            "webhook_secret",
+            "webhook_secret_token",
+        )
 
 
 @admin.register(ConnectedSource)
@@ -57,6 +66,7 @@ class ConnectedSourceAdmin(admin.ModelAdmin):
         "credentials_fingerprint",
         "masked_credentials",
         "masked_webhook_secret",
+        "masked_webhook_secret_token",
         "last_sync_at",
         "last_error_at",
         "last_error_message",
@@ -105,6 +115,8 @@ class ConnectedSourceAdmin(admin.ModelAdmin):
                 "fields": (
                     "new_webhook_secret",
                     "masked_webhook_secret",
+                    "new_webhook_secret_token",
+                    "masked_webhook_secret_token",
                 )
             },
         ),
@@ -135,17 +147,39 @@ class ConnectedSourceAdmin(admin.ModelAdmin):
         if not obj.webhook_secret:
             return ""
 
-        suffix = obj.webhook_secret[-6:] if len(obj.webhook_secret) >= 6 else obj.webhook_secret
+        suffix = (
+            obj.webhook_secret[-6:]
+            if len(obj.webhook_secret) >= 6
+            else obj.webhook_secret
+        )
+        return f"******{suffix}"
+
+    @admin.display(description="Stored webhook secret token")
+    def masked_webhook_secret_token(self, obj):
+        if not obj.webhook_secret_token:
+            return ""
+
+        suffix = (
+            obj.webhook_secret_token[-6:]
+            if len(obj.webhook_secret_token) >= 6
+            else obj.webhook_secret_token
+        )
         return f"******{suffix}"
 
     def save_model(self, request, obj, form, change):
         credentials = form.cleaned_data.get("credentials")
         new_webhook_secret = form.cleaned_data.get("new_webhook_secret")
+        new_webhook_secret_token = form.cleaned_data.get(
+            "new_webhook_secret_token"
+        )
 
         if credentials:
             obj.set_credentials(credentials)
 
         if new_webhook_secret:
             obj.webhook_secret = new_webhook_secret.strip()
+
+        if new_webhook_secret_token:
+            obj.webhook_secret_token = new_webhook_secret_token.strip()
 
         super().save_model(request, obj, form, change)

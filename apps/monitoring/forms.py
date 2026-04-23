@@ -123,6 +123,7 @@ class MonitoringProfileCreateForm(forms.ModelForm):
             name=f"{profile.name} Telegram bot",
             external_id=extract_bot_id_from_token(token),
             webhook_secret=generate_webhook_secret(),
+            webhook_secret_token=generate_webhook_secret(),
             metadata={
                 "alert_chat_id": alert_chat_id,
             },

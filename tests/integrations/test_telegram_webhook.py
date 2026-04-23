@@ -20,12 +20,6 @@ def telegram_source(user, monitoring_profile):
     )
 
 
-def build_telegram_secret_headers(source):
-    return {
-        "HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN": source.webhook_secret_token,
-    }
-
-
 @pytest.fixture
 def telegram_payload():
     return {
@@ -47,6 +41,12 @@ def telegram_payload():
             },
             "text": "Das Produkt ist kaputt und funktioniert nicht. Bitte dringend helfen.",
         },
+    }
+
+
+def build_telegram_secret_headers(source):
+    return {
+        "HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN": source.webhook_secret_token,
     }
 
 
@@ -172,6 +172,55 @@ def test_telegram_webhook_rejects_unknown_secret(
     assert response.json() == {
         "ok": False,
         "error": "not_found",
+    }
+
+
+@pytest.mark.django_db
+def test_telegram_webhook_rejects_missing_secret_token_header(
+    client,
+    telegram_source,
+    telegram_payload,
+):
+    url = reverse(
+        "integrations:telegram_bot_webhook",
+        kwargs={"webhook_secret": telegram_source.webhook_secret},
+    )
+
+    response = client.post(
+        url,
+        data=telegram_payload,
+        content_type="application/json",
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "ok": False,
+        "error": "forbidden",
+    }
+
+
+@pytest.mark.django_db
+def test_telegram_webhook_rejects_wrong_secret_token_header(
+    client,
+    telegram_source,
+    telegram_payload,
+):
+    url = reverse(
+        "integrations:telegram_bot_webhook",
+        kwargs={"webhook_secret": telegram_source.webhook_secret},
+    )
+
+    response = client.post(
+        url,
+        data=telegram_payload,
+        content_type="application/json",
+        HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN="wrong-token",
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "ok": False,
+        "error": "forbidden",
     }
 
 

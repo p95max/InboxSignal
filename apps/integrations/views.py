@@ -1,5 +1,6 @@
 import json
 import logging
+import secrets
 
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
@@ -12,6 +13,8 @@ from apps.integrations.services.telegram_bot import handle_telegram_webhook_upda
 
 
 logger = logging.getLogger(__name__)
+
+TELEGRAM_SECRET_TOKEN_HEADER = "X-Telegram-Bot-Api-Secret-Token"
 
 
 @csrf_exempt
@@ -34,6 +37,25 @@ def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonRespo
                 "error": "not_found",
             },
             status=404,
+        )
+
+    if not is_valid_telegram_secret_token(request=request, source=source):
+        logger.warning(
+            "telegram_webhook_rejected_invalid_secret_token",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+                "secret_token_present": bool(
+                    request.headers.get(TELEGRAM_SECRET_TOKEN_HEADER)
+                ),
+            },
+        )
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "forbidden",
+            },
+            status=403,
         )
 
     source_limit = check_rate_limit(
@@ -137,6 +159,24 @@ def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonRespo
             "task_id": result.task_id if result else None,
         }
     )
+
+
+def is_valid_telegram_secret_token(
+    *,
+    request: HttpRequest,
+    source: ConnectedSource,
+) -> bool:
+    """Validate Telegram secret token header in constant time."""
+
+    expected = (source.webhook_secret_token or "").strip()
+    provided = (
+        request.headers.get(TELEGRAM_SECRET_TOKEN_HEADER, "").strip()
+    )
+
+    if not expected or not provided:
+        return False
+
+    return secrets.compare_digest(provided, expected)
 
 
 def get_telegram_source_by_webhook_secret(

@@ -143,11 +143,15 @@ class Command(BaseCommand):
 
         allowed_updates = parse_allowed_updates(options["allowed_updates"])
 
+        if not source.webhook_secret_token:
+            raise CommandError("ConnectedSource webhook_secret_token is empty.")
+
         payload = {
             "url": webhook_url,
             "allowed_updates": allowed_updates,
             "drop_pending_updates": options["drop_pending_updates"],
             "max_connections": options["max_connections"],
+            "secret_token": source.webhook_secret_token,
         }
 
         response_data = telegram_api_request(

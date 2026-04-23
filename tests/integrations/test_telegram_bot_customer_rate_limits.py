@@ -15,6 +15,7 @@ def telegram_source(monitoring_profile):
         name="Test Telegram bot",
         external_id="test-bot",
         webhook_secret="test-webhook-secret",
+        webhook_secret_token="test-webhook-secret-token",
         metadata={
             "alert_chat_id": "alert-chat-1",
         },
@@ -40,6 +41,12 @@ def telegram_payload():
             },
             "text": "Hallo, ist das Auto noch da?",
         },
+    }
+
+
+def build_telegram_secret_headers(source):
+    return {
+        "HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN": source.webhook_secret_token,
     }
 
 
@@ -75,6 +82,7 @@ def test_telegram_customer_interval_limit_blocks_second_message(
         url,
         data=telegram_payload,
         content_type="application/json",
+        **build_telegram_secret_headers(telegram_source),
     )
 
     second_payload = {
@@ -91,6 +99,7 @@ def test_telegram_customer_interval_limit_blocks_second_message(
         url,
         data=second_payload,
         content_type="application/json",
+        **build_telegram_secret_headers(telegram_source),
     )
 
     assert first_response.status_code == 200
@@ -139,6 +148,7 @@ def test_telegram_customer_daily_limit_blocks_new_message(
         url,
         data=telegram_payload,
         content_type="application/json",
+        **build_telegram_secret_headers(telegram_source),
     )
 
     second_payload = {
@@ -155,6 +165,7 @@ def test_telegram_customer_daily_limit_blocks_new_message(
         url,
         data=second_payload,
         content_type="application/json",
+        **build_telegram_secret_headers(telegram_source),
     )
 
     assert first_response.status_code == 200
@@ -199,11 +210,13 @@ def test_telegram_customer_limit_does_not_block_duplicate_delivery(
         url,
         data=telegram_payload,
         content_type="application/json",
+        **build_telegram_secret_headers(telegram_source),
     )
     second_response = client.post(
         url,
         data=telegram_payload,
         content_type="application/json",
+        **build_telegram_secret_headers(telegram_source),
     )
 
     assert first_response.status_code == 200
