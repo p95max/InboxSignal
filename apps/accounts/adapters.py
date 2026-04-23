@@ -16,8 +16,8 @@ class AccountAdapter(DefaultAccountAdapter):
         logger.info(
             "email_confirmation_url_generated",
             extra={
-                "email": emailconfirmation.email_address.email,
-                "confirmation_url": url,
+                "user_id": emailconfirmation.email_address.user_id,
+                "email_confirmation_generated": True,
             },
         )
 
@@ -25,5 +25,4 @@ class AccountAdapter(DefaultAccountAdapter):
 
     def get_email_verification_redirect_url(self, email_address):
         """Redirect users after successful email verification."""
-
         return reverse("dashboard")

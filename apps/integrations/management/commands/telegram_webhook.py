@@ -119,12 +119,13 @@ class Command(BaseCommand):
 
         return source
 
+
     def set_webhook(
-        self,
-        *,
-        source: ConnectedSource,
-        bot_token: str,
-        options: dict,
+            self,
+            *,
+            source: ConnectedSource,
+            bot_token: str,
+            options: dict,
     ) -> None:
         base_url = options.get("base_url")
 
@@ -156,12 +157,33 @@ class Command(BaseCommand):
             timeout=options["timeout"],
         )
 
+        masked_webhook_path = reverse(
+            "integrations:telegram_bot_webhook",
+            kwargs={"webhook_secret": "***masked***"},
+        )
+        masked_webhook_url = urljoin(
+            base_url.rstrip("/") + "/",
+            masked_webhook_path.lstrip("/"),
+        )
+
         self.stdout.write(
             self.style.SUCCESS(
-                f"Telegram webhook was set for source #{source.id}: {webhook_url}"
+                f"Telegram webhook was set for source #{source.id}: "
+                f"{masked_webhook_url}"
             )
         )
-        self.stdout.write(json.dumps(response_data, indent=2, ensure_ascii=False))
+        self.stdout.write(
+            json.dumps(
+                {
+                    "ok": response_data.get("ok"),
+                    "result": response_data.get("result"),
+                    "description": response_data.get("description"),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+
 
     def show_webhook_info(self, *, bot_token: str, timeout: float) -> None:
         response_data = telegram_api_request(
@@ -172,6 +194,7 @@ class Command(BaseCommand):
         )
 
         self.stdout.write(json.dumps(response_data, indent=2, ensure_ascii=False))
+
 
     def delete_webhook(self, *, bot_token: str, options: dict) -> None:
         response_data = telegram_api_request(
