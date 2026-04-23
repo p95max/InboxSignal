@@ -7,7 +7,7 @@ from apps.monitoring.models import MonitoringProfile
 
 
 @pytest.mark.django_db
-def test_dashboard_creates_profile_and_telegram_source(client, user, settings):
+def test_onboarding_creates_profile_and_telegram_source(client, user, settings):
     settings.FIELD_ENCRYPTION_KEY = Fernet.generate_key().decode()
 
     client.force_login(user)
@@ -15,7 +15,7 @@ def test_dashboard_creates_profile_and_telegram_source(client, user, settings):
     token = "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi"
 
     response = client.post(
-        reverse("dashboard"),
+        reverse("onboarding"),
         data={
             "name": "Sales Telegram",
             "scenario": MonitoringProfile.Scenario.LEADS,
@@ -30,6 +30,7 @@ def test_dashboard_creates_profile_and_telegram_source(client, user, settings):
     )
 
     assert response.status_code == 302
+    assert response.url == reverse("dashboard")
 
     profile = MonitoringProfile.objects.get(owner=user, name="Sales Telegram")
     source = ConnectedSource.objects.get(profile=profile)
@@ -47,13 +48,13 @@ def test_dashboard_creates_profile_and_telegram_source(client, user, settings):
 
 
 @pytest.mark.django_db
-def test_dashboard_rejects_invalid_telegram_token(client, user, settings):
+def test_onboarding_rejects_invalid_telegram_token(client, user, settings):
     settings.FIELD_ENCRYPTION_KEY = Fernet.generate_key().decode()
 
     client.force_login(user)
 
     response = client.post(
-        reverse("dashboard"),
+        reverse("onboarding"),
         data={
             "name": "Broken profile",
             "scenario": MonitoringProfile.Scenario.GENERAL,
