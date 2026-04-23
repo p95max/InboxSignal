@@ -11,10 +11,16 @@ class ConnectedSourceAdminForm(forms.ModelForm):
         widget=forms.PasswordInput(render_value=False),
         help_text="Write-only field. Leave empty to keep existing credentials.",
     )
+    new_webhook_secret = forms.CharField(
+        required=False,
+        label="Webhook secret",
+        widget=forms.PasswordInput(render_value=False),
+        help_text="Write-only field. Leave empty to keep existing webhook secret.",
+    )
 
     class Meta:
         model = ConnectedSource
-        fields = "__all__"
+        exclude = ("webhook_secret",)
 
 
 @admin.register(ConnectedSource)
@@ -50,6 +56,7 @@ class ConnectedSourceAdmin(admin.ModelAdmin):
         "credentials_encrypted",
         "credentials_fingerprint",
         "masked_credentials",
+        "masked_webhook_secret",
         "last_sync_at",
         "last_error_at",
         "last_error_message",
@@ -96,7 +103,8 @@ class ConnectedSourceAdmin(admin.ModelAdmin):
             "Webhook",
             {
                 "fields": (
-                    "webhook_secret",
+                    "new_webhook_secret",
+                    "masked_webhook_secret",
                 )
             },
         ),
@@ -122,10 +130,22 @@ class ConnectedSourceAdmin(admin.ModelAdmin):
         ),
     )
 
+    @admin.display(description="Stored webhook secret")
+    def masked_webhook_secret(self, obj):
+        if not obj.webhook_secret:
+            return ""
+
+        suffix = obj.webhook_secret[-6:] if len(obj.webhook_secret) >= 6 else obj.webhook_secret
+        return f"******{suffix}"
+
     def save_model(self, request, obj, form, change):
         credentials = form.cleaned_data.get("credentials")
+        new_webhook_secret = form.cleaned_data.get("new_webhook_secret")
 
         if credentials:
             obj.set_credentials(credentials)
+
+        if new_webhook_secret:
+            obj.webhook_secret = new_webhook_secret.strip()
 
         super().save_model(request, obj, form, change)
