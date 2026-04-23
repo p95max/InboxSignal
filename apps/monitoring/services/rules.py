@@ -85,6 +85,43 @@ URGENT_KEYWORDS = (
     "heute",
 )
 
+DEADLINE_KEYWORDS = (
+    "deadline",
+    "today",
+    "tomorrow",
+    "asap",
+    "immediately",
+    "urgent",
+    "frist",
+    "heute",
+    "morgen",
+    "dringend",
+    "sofort",
+    "сегодня",
+    "завтра",
+    "срочно",
+    "немедленно",
+    "дедлайн",
+)
+
+NEGATIVE_URGENCY_KEYWORDS = (
+    "angry",
+    "complaint",
+    "bad",
+    "broken",
+    "not working",
+    "problem",
+    "beschwerde",
+    "schlecht",
+    "kaputt",
+    "funktioniert nicht",
+    "не работает",
+    "плохо",
+    "жалоба",
+    "проблема",
+    "сломано",
+)
+
 GREETING_WORDS = (
     "hi",
     "hello",
@@ -178,6 +215,19 @@ def analyze_message_by_rules(
         score=score,
         profile=profile,
         matched_rules=matched_rules,
+    )
+
+    score = apply_profile_urgency_rules(
+        text=normalized_text,
+        category=category,
+        score=score,
+        profile=profile,
+        matched_rules=matched_rules,
+    )
+
+    extracted_data = filter_extracted_data_by_profile(
+        profile=profile,
+        extracted_data=extracted_data,
     )
 
     return RuleAnalysisResult(
@@ -300,6 +350,76 @@ def apply_profile_tracking_rules(
         return 0
 
     return score
+
+
+def apply_profile_urgency_rules(
+    *,
+    text: str,
+    category: str,
+    score: int,
+    profile: MonitoringProfile | None,
+    matched_rules: list[str],
+) -> int:
+    """Apply profile-specific urgency escalation rules."""
+
+    if profile is None:
+        return score
+
+    if score <= 0:
+        return score
+
+    if not profile.track_urgent:
+        return score
+
+    if (
+        profile.urgent_negative
+        and category == Event.Category.COMPLAINT
+        and contains_any(text, NEGATIVE_URGENCY_KEYWORDS)
+    ):
+        score = max(score, 85)
+        matched_rules.append("profile_urgent_negative")
+
+    if profile.urgent_deadlines and contains_any(text, DEADLINE_KEYWORDS):
+        score = max(score, 85)
+        matched_rules.append("profile_urgent_deadlines")
+
+    # Repeated message urgency requires IncomingMessage / ExternalContact context.
+    # It is intentionally handled later in processing, not in pure text rules.
+
+    return score
+
+
+def filter_extracted_data_by_profile(
+    *,
+    profile: MonitoringProfile | None,
+    extracted_data: dict,
+) -> dict:
+    """Remove extracted fields disabled in the monitoring profile."""
+
+    data = dict(extracted_data or {})
+
+    data.setdefault("name", None)
+    data.setdefault("contact", None)
+    data.setdefault("product_or_service", None)
+    data.setdefault("budget", None)
+    data.setdefault("date_or_time", None)
+
+    if profile is None:
+        return data
+
+    if not profile.extract_name:
+        data["name"] = None
+
+    if not profile.extract_contact:
+        data["contact"] = None
+
+    if not profile.extract_product_or_service:
+        data["product_or_service"] = None
+
+    if not profile.extract_budget:
+        data["budget"] = None
+
+    return data
 
 
 def build_summary(*, category: str, score: int) -> str:

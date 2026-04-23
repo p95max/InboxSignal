@@ -8,7 +8,7 @@ from apps.ai.services.client import request_ai_analysis
 from apps.ai.services.parser import parse_ai_analysis_response
 from apps.ai.services.prompts import build_ai_analysis_prompt
 from apps.monitoring.models import Event, IncomingMessage, MonitoringProfile
-from apps.monitoring.services.rules import RuleAnalysisResult
+from apps.monitoring.services.rules import RuleAnalysisResult, filter_extracted_data_by_profile
 from apps.ai.services.pricing import calculate_estimated_ai_cost
 from apps.ai.services.usage import (
     AIUsageLimitExceeded,
@@ -101,6 +101,11 @@ def analyze_message_with_ai(message: IncomingMessage) -> AIAnalysisResult:
         provider_response = request_ai_analysis(prompt)
         parsed = parse_ai_analysis_response(provider_response.content)
 
+        filtered_extracted_data = filter_extracted_data_by_profile(
+            profile=message.profile,
+            extracted_data=parsed.extracted_data,
+        )
+
         duration_ms = int((time.perf_counter() - started) * 1000)
         estimated_cost = calculate_estimated_ai_cost(
             input_tokens=provider_response.input_tokens,
@@ -118,7 +123,7 @@ def analyze_message_with_ai(message: IncomingMessage) -> AIAnalysisResult:
             category=parsed.category,
             priority_score=parsed.priority_score,
             summary=parsed.summary,
-            extracted_data=parsed.extracted_data,
+            extracted_data=filtered_extracted_data,
             raw_response={
                 "parsed": parsed.raw_response,
                 "provider": provider_response.raw_response,
