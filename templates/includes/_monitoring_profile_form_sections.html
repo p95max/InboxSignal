@@ -1,0 +1,188 @@
+{% if form.non_field_errors %}
+    <div class="errorlist">
+        {{ form.non_field_errors }}
+    </div>
+{% endif %}
+
+<div class="form-grid">
+    {% if form.name %}
+        <div>
+            <label for="{{ form.name.id_for_label }}">
+                {{ form.name.label }}
+            </label>
+            {{ form.name }}
+            {% if form.name.help_text %}
+                <div class="helptext">{{ form.name.help_text }}</div>
+            {% endif %}
+            {% for error in form.name.errors %}
+                <div class="form-error">{{ error }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if form.scenario %}
+        <div>
+            <label for="{{ form.scenario.id_for_label }}">
+                {{ form.scenario.label }}
+            </label>
+            {{ form.scenario }}
+            {% if form.scenario.help_text %}
+                <div class="helptext">{{ form.scenario.help_text }}</div>
+            {% endif %}
+            {% for error in form.scenario.errors %}
+                <div class="form-error">{{ error }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if show_status_field and form.status %}
+        <div>
+            <label for="{{ form.status.id_for_label }}">
+                {{ form.status.label }}
+            </label>
+            {{ form.status }}
+            {% if form.status.help_text %}
+                <div class="helptext">{{ form.status.help_text }}</div>
+            {% endif %}
+            {% for error in form.status.errors %}
+                <div class="form-error">{{ error }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if form.business_context %}
+        <div class="form-grid-full">
+            <label for="{{ form.business_context.id_for_label }}">
+                {{ form.business_context.label }}
+            </label>
+            {{ form.business_context }}
+            {% if form.business_context.help_text %}
+                <div class="helptext">{{ form.business_context.help_text }}</div>
+            {% else %}
+                <div class="helptext">
+                    Recommended for better AI/rule accuracy. Max 300 characters.
+                </div>
+            {% endif %}
+            {% for error in form.business_context.errors %}
+                <div class="form-error">{{ error }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<div class="form-section">
+    <div class="form-section-label">What to track</div>
+
+    <div class="checkbox-grid">
+        {% if form.track_leads %}
+            <label class="checkbox-row">
+                {{ form.track_leads }}
+                <span>{{ form.track_leads.label }}</span>
+            </label>
+        {% endif %}
+
+        {% if form.track_complaints %}
+            <label class="checkbox-row">
+                {{ form.track_complaints }}
+                <span>{{ form.track_complaints.label }}</span>
+            </label>
+        {% endif %}
+
+        {% if form.track_requests %}
+            <label class="checkbox-row">
+                {{ form.track_requests }}
+                <span>{{ form.track_requests.label }}</span>
+            </label>
+        {% endif %}
+
+        {% if form.track_urgent %}
+            <label class="checkbox-row">
+                {{ form.track_urgent }}
+                <span>{{ form.track_urgent.label }}</span>
+            </label>
+        {% endif %}
+
+        {% if form.track_general_activity %}
+            <label class="checkbox-row">
+                {{ form.track_general_activity }}
+                <span>{{ form.track_general_activity.label }}</span>
+            </label>
+        {% endif %}
+    </div>
+</div>
+
+{% if show_connection_fields %}
+    <div class="form-section">
+        <div class="form-section-label">Telegram connection</div>
+
+        <div class="form-grid">
+            {% if form.telegram_bot_token %}
+                <div>
+                    <label for="{{ form.telegram_bot_token.id_for_label }}">
+                        {{ form.telegram_bot_token.label }}
+                    </label>
+                    {{ form.telegram_bot_token }}
+                    {% if form.telegram_bot_token.help_text %}
+                        <div class="helptext">{{ form.telegram_bot_token.help_text }}</div>
+                    {% endif %}
+                    {% for error in form.telegram_bot_token.errors %}
+                        <div class="form-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if form.alert_chat_id %}
+                <div>
+                    <label for="{{ form.alert_chat_id.id_for_label }}">
+                        {{ form.alert_chat_id.label }}
+                    </label>
+                    {{ form.alert_chat_id }}
+                    {% if form.alert_chat_id.help_text %}
+                        <div class="helptext">{{ form.alert_chat_id.help_text|linebreaksbr }}</div>
+                    {% endif %}
+                    {% for error in form.alert_chat_id.errors %}
+                        <div class="form-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
+{% if show_settings_fields %}
+    <div class="form-section">
+        <div class="form-section-label">Profile settings</div>
+
+        <div class="form-grid">
+            {% if form.alert_chat_id %}
+                <div>
+                    <label for="{{ form.alert_chat_id.id_for_label }}">
+                        {{ form.alert_chat_id.label }}
+                    </label>
+                    {{ form.alert_chat_id }}
+                    {% if form.alert_chat_id.help_text %}
+                        <div class="helptext">{{ form.alert_chat_id.help_text|linebreaksbr }}</div>
+                    {% endif %}
+                    {% for error in form.alert_chat_id.errors %}
+                        <div class="form-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if form.ai_daily_call_limit %}
+                <div>
+                    <label for="{{ form.ai_daily_call_limit.id_for_label }}">
+                        {{ form.ai_daily_call_limit.label }}
+                    </label>
+                    {{ form.ai_daily_call_limit }}
+                    {% if form.ai_daily_call_limit.help_text %}
+                        <div class="helptext">{{ form.ai_daily_call_limit.help_text }}</div>
+                    {% endif %}
+                    {% for error in form.ai_daily_call_limit.errors %}
+                        <div class="form-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Edit profile | Messaging Monitoring{% endblock %}
+{% block title %}Create profile | Messaging Monitoring{% endblock %}
 
 {% block content %}
 <div class="page-header page-header-with-actions">
     <div>
-        <h1>Edit monitoring profile</h1>
-        <p>Update profile settings without changing connected Telegram sources.</p>
+        <h1>Create monitoring profile</h1>
+        <p>Add a new monitoring profile and connect a Telegram bot.</p>
     </div>
 
     <a class="button" href="{% url 'dashboard' %}">
@@ -18,7 +18,7 @@
     <form method="post" class="profile-create-form">
         {% csrf_token %}
 
-        {% include "includes/_monitoring_profile_form_sections.html" with show_connection_fields=False show_settings_fields=True show_status_field=True %}
+        {% include "includes/_monitoring_profile_form_sections.html" with show_connection_fields=True show_settings_fields=False show_status_field=False %}
 
         <div class="form-actions">
             <a class="button" href="{% url 'dashboard' %}">
@@ -26,7 +26,7 @@
             </a>
 
             <button class="button button-primary" type="submit">
-                Save changes
+                Create profile
             </button>
         </div>
     </form>

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Onboarding | Messaging Monitoring{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Set up your first monitoring profile</h1>
+        <p>
+            First connect Telegram, then choose what matters, then start receiving only important events.
+        </p>
+    </div>
+</div>
+
+<section class="grid grid-3">
+    <div class="card">
+        <div class="form-section-label">Step 1</div>
+        <h3>Choose a scenario</h3>
+        <p class="muted">Start with a ready-made monitoring profile for your use case.</p>
+    </div>
+
+    <div class="card">
+        <div class="form-section-label">Step 2</div>
+        <h3>Add business context</h3>
+        <p class="muted">Short context improves AI and rule accuracy.</p>
+    </div>
+
+    <div class="card">
+        <div class="form-section-label">Step 3</div>
+        <h3>Connect Telegram</h3>
+        <p class="muted">Add your bot token and optional alert destination chat.</p>
+    </div>
+</section>
+
+<section class="card">
+    <form method="post" class="profile-create-form">
+        {% csrf_token %}
+
+        {% include "includes/_monitoring_profile_form_sections.html" with show_connection_fields=True show_settings_fields=False show_status_field=False %}
+
+        <div class="form-actions">
+            <button class="button button-primary" type="submit">
+                Create first profile
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}
