@@ -1,3 +1,6 @@
+{% load static %}
+<script src="{% static 'js/profile_constructor.js' %}" defer></script>
+
 {% if form.non_field_errors %}
     <div class="errorlist">
         {{ form.non_field_errors }}
@@ -32,6 +35,13 @@
             {% for error in form.scenario.errors %}
                 <div class="form-error">{{ error }}</div>
             {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if form.scenario %}
+        <div class="helptext">
+            Changing scenario applies preset values to the constructor checkboxes.
+            You can still fine-tune them manually afterwards.
         </div>
     {% endif %}
 
@@ -274,3 +284,5 @@
         </div>
     </div>
 {% endif %}
+
+{{ scenario_presets|json_script:"scenario-presets-data" }}

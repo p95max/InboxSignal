@@ -23,6 +23,7 @@ from apps.monitoring.forms import (
     MonitoringProfileUpdateForm,
 )
 from apps.monitoring.models import Event, MonitoringProfile
+from apps.monitoring.services.scenario_presets import get_scenario_presets_for_ui
 
 
 def _user_has_monitoring_profiles(user) -> bool:
@@ -100,6 +101,7 @@ def onboarding_view(request: HttpRequest) -> HttpResponse:
         request,
         "monitoring/onboarding.html",
         {
+            "scenario_presets": get_scenario_presets_for_ui(),
             "form": form,
             "is_onboarding": True,
         },
@@ -131,135 +133,79 @@ def profile_create_view(request: HttpRequest) -> HttpResponse:
         "monitoring/profile_create.html",
         {
             "form": form,
+            "scenario_presets": get_scenario_presets_for_ui(),
             "is_onboarding": False,
         },
     )
 
+@verified_email_required
+@require_POST
+def profile_delete_view(request, profile_id: int):
+    """Delete a monitoring profile owned by the current user."""
+
+    profile = (
+        MonitoringProfile.objects.filter(
+            id=profile_id,
+            owner=request.user,
+        )
+        .first()
+    )
+
+    if profile is None:
+        raise Http404("Monitoring profile was not found.")
+
+    profile_name = profile.name
+    profile.delete()
+
+    messages.success(
+        request,
+        f'Monitoring profile "{profile_name}" was deleted.',
+    )
+
+    return redirect("dashboard")
 
 @verified_email_required
-def dashboard_view(request: HttpRequest) -> HttpResponse:
-    """Show dashboard with monitoring stats and profile cards."""
+def profile_update_view(request, profile_id: int):
+    """Update a monitoring profile owned by the current user."""
 
-    if not _user_has_monitoring_profiles(request.user):
-        return redirect("onboarding")
-
-    today_start = timezone.localtime(timezone.now()).replace(
-        hour=0,
-        minute=0,
-        second=0,
-        microsecond=0,
+    profile = (
+        MonitoringProfile.objects.filter(
+            id=profile_id,
+            owner=request.user,
+        )
+        .first()
     )
 
-    user_events = Event.objects.filter(profile__owner=request.user)
-    open_events = user_events.filter(status=Event.Status.NEW)
+    if profile is None:
+        raise Http404("Monitoring profile was not found.")
 
-    stats = {
-        "today_total": user_events.filter(created_at__gte=today_start).count(),
-        "urgent_open": open_events.filter(priority=Event.Priority.URGENT).count(),
-        "important_open": open_events.filter(priority=Event.Priority.IMPORTANT).count(),
-        "open_total": open_events.count(),
-    }
-
-    user_ai_usage = get_user_daily_ai_usage(request.user.id)
-
-    profiles = (
-        MonitoringProfile.objects.filter(owner=request.user)
-        .annotate(
-            events_total=Count("events", distinct=True),
-            open_events_count=Count(
-                "events",
-                filter=Q(events__status=Event.Status.NEW),
-                distinct=True,
-            ),
-            urgent_open_events_count=Count(
-                "events",
-                filter=Q(
-                    events__priority=Event.Priority.URGENT,
-                    events__status=Event.Status.NEW,
-                ),
-                distinct=True,
-            ),
-            important_open_events_count=Count(
-                "events",
-                filter=Q(
-                    events__priority=Event.Priority.IMPORTANT,
-                    events__status=Event.Status.NEW,
-                ),
-                distinct=True,
-            ),
-            archived_events_count=Count(
-                "events",
-                filter=Q(events__status=Event.Status.ARCHIVED),
-                distinct=True,
-            ),
-            telegram_sources_count=Count(
-                "connected_sources",
-                filter=Q(
-                    connected_sources__source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
-                    connected_sources__is_deleted=False,
-                ),
-                distinct=True,
-            ),
-            active_telegram_sources_count=Count(
-                "connected_sources",
-                filter=Q(
-                    connected_sources__source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
-                    connected_sources__status=ConnectedSource.Status.ACTIVE,
-                    connected_sources__is_deleted=False,
-                ),
-                distinct=True,
-            ),
+    if request.method == "POST":
+        form = MonitoringProfileUpdateForm(
+            request.POST,
+            instance=profile,
         )
-        .prefetch_related(
-            Prefetch(
-                "connected_sources",
-                queryset=ConnectedSource.objects.filter(
-                    source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
-                    is_deleted=False,
-                ).order_by("name"),
-                to_attr="telegram_bot_sources",
+
+        if form.is_valid():
+            form.save()
+
+            messages.success(
+                request,
+                f'Monitoring profile "{profile.name}" was updated.',
             )
-        )
-        .order_by("-last_event_at", "-updated_at")
-    )
 
-    profiles = list(profiles)
-
-    profiles_count = len(profiles)
-    active_profiles_count = sum(
-        1 for profile in profiles if profile.status == MonitoringProfile.Status.ACTIVE
-    )
-    disabled_profiles_count = profiles_count - active_profiles_count
-
-    for profile in profiles:
-        profile.ai_daily_usage = get_profile_daily_ai_usage(profile)
+            return redirect("dashboard")
+    else:
+        form = MonitoringProfileUpdateForm(instance=profile)
 
     return render(
         request,
-        "monitoring/dashboard.html",
+        "monitoring/profile_update.html",
         {
-            "stats": stats,
-            "user_ai_usage": user_ai_usage,
-            "profiles": profiles,
-            "profiles_count": profiles_count,
-            "active_profiles_count": active_profiles_count,
-            "disabled_profiles_count": disabled_profiles_count,
+            "profile": profile,
+            "form": form,
+            "scenario_presets": get_scenario_presets_for_ui(),
         },
     )
-
-def filter_archived_events_by_decision(events, decision: str):
-    """Filter archived events by the decision made before archiving."""
-
-    if decision == "reviewed":
-        return events.filter(reviewed_at__isnull=False)
-
-    if decision == "ignored":
-        return events.filter(ignored_at__isnull=False)
-
-    if decision == "escalated":
-        return events.filter(escalated_at__isnull=False)
-
-    return events
 
 @verified_email_required
 def profile_detail_view(request, profile_id: int):
@@ -613,73 +559,129 @@ def profile_detail_view(request, profile_id: int):
 
 
 @verified_email_required
-@require_POST
-def profile_delete_view(request, profile_id: int):
-    """Delete a monitoring profile owned by the current user."""
+def dashboard_view(request: HttpRequest) -> HttpResponse:
+    """Show dashboard with monitoring stats and profile cards."""
 
-    profile = (
-        MonitoringProfile.objects.filter(
-            id=profile_id,
-            owner=request.user,
-        )
-        .first()
+    if not _user_has_monitoring_profiles(request.user):
+        return redirect("onboarding")
+
+    today_start = timezone.localtime(timezone.now()).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
     )
 
-    if profile is None:
-        raise Http404("Monitoring profile was not found.")
+    user_events = Event.objects.filter(profile__owner=request.user)
+    open_events = user_events.filter(status=Event.Status.NEW)
 
-    profile_name = profile.name
-    profile.delete()
+    stats = {
+        "today_total": user_events.filter(created_at__gte=today_start).count(),
+        "urgent_open": open_events.filter(priority=Event.Priority.URGENT).count(),
+        "important_open": open_events.filter(priority=Event.Priority.IMPORTANT).count(),
+        "open_total": open_events.count(),
+    }
 
-    messages.success(
-        request,
-        f'Monitoring profile "{profile_name}" was deleted.',
-    )
+    user_ai_usage = get_user_daily_ai_usage(request.user.id)
 
-    return redirect("dashboard")
-
-@verified_email_required
-def profile_update_view(request, profile_id: int):
-    """Update a monitoring profile owned by the current user."""
-
-    profile = (
-        MonitoringProfile.objects.filter(
-            id=profile_id,
-            owner=request.user,
+    profiles = (
+        MonitoringProfile.objects.filter(owner=request.user)
+        .annotate(
+            events_total=Count("events", distinct=True),
+            open_events_count=Count(
+                "events",
+                filter=Q(events__status=Event.Status.NEW),
+                distinct=True,
+            ),
+            urgent_open_events_count=Count(
+                "events",
+                filter=Q(
+                    events__priority=Event.Priority.URGENT,
+                    events__status=Event.Status.NEW,
+                ),
+                distinct=True,
+            ),
+            important_open_events_count=Count(
+                "events",
+                filter=Q(
+                    events__priority=Event.Priority.IMPORTANT,
+                    events__status=Event.Status.NEW,
+                ),
+                distinct=True,
+            ),
+            archived_events_count=Count(
+                "events",
+                filter=Q(events__status=Event.Status.ARCHIVED),
+                distinct=True,
+            ),
+            telegram_sources_count=Count(
+                "connected_sources",
+                filter=Q(
+                    connected_sources__source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+                    connected_sources__is_deleted=False,
+                ),
+                distinct=True,
+            ),
+            active_telegram_sources_count=Count(
+                "connected_sources",
+                filter=Q(
+                    connected_sources__source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+                    connected_sources__status=ConnectedSource.Status.ACTIVE,
+                    connected_sources__is_deleted=False,
+                ),
+                distinct=True,
+            ),
         )
-        .first()
-    )
-
-    if profile is None:
-        raise Http404("Monitoring profile was not found.")
-
-    if request.method == "POST":
-        form = MonitoringProfileUpdateForm(
-            request.POST,
-            instance=profile,
-        )
-
-        if form.is_valid():
-            form.save()
-
-            messages.success(
-                request,
-                f'Monitoring profile "{profile.name}" was updated.',
+        .prefetch_related(
+            Prefetch(
+                "connected_sources",
+                queryset=ConnectedSource.objects.filter(
+                    source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+                    is_deleted=False,
+                ).order_by("name"),
+                to_attr="telegram_bot_sources",
             )
+        )
+        .order_by("-last_event_at", "-updated_at")
+    )
 
-            return redirect("dashboard")
-    else:
-        form = MonitoringProfileUpdateForm(instance=profile)
+    profiles = list(profiles)
+
+    profiles_count = len(profiles)
+    active_profiles_count = sum(
+        1 for profile in profiles if profile.status == MonitoringProfile.Status.ACTIVE
+    )
+    disabled_profiles_count = profiles_count - active_profiles_count
+
+    for profile in profiles:
+        profile.ai_daily_usage = get_profile_daily_ai_usage(profile)
 
     return render(
         request,
-        "monitoring/profile_update.html",
+        "monitoring/dashboard.html",
         {
-            "profile": profile,
-            "form": form,
+            "stats": stats,
+            "user_ai_usage": user_ai_usage,
+            "profiles": profiles,
+            "profiles_count": profiles_count,
+            "active_profiles_count": active_profiles_count,
+            "disabled_profiles_count": disabled_profiles_count,
         },
     )
 
+def filter_archived_events_by_decision(events, decision: str):
+    """Filter archived events by the decision made before archiving."""
+
+    if decision == "reviewed":
+        return events.filter(reviewed_at__isnull=False)
+
+    if decision == "ignored":
+        return events.filter(ignored_at__isnull=False)
+
+    if decision == "escalated":
+        return events.filter(escalated_at__isnull=False)
+
+    return events
 
 @verified_email_required
 @require_POST

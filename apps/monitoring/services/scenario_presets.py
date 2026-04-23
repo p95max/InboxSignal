@@ -103,15 +103,7 @@ def apply_scenario_preset(
     data: dict,
     overwrite: bool = False,
 ) -> dict:
-    """Apply preset values to a dict-like payload.
-
-    overwrite=False:
-    - keep explicitly provided values
-    - fill only missing fields
-
-    overwrite=True:
-    - preset wins and rewrites existing values
-    """
+    """Apply preset values to a dict-like payload."""
 
     preset = get_scenario_preset(scenario)
     result = dict(data)
@@ -121,3 +113,12 @@ def apply_scenario_preset(
             result[field_name] = value
 
     return result
+
+
+def get_scenario_presets_for_ui() -> dict[str, dict]:
+    """Return all scenario presets in a template-friendly format."""
+
+    return {
+        scenario_value: get_scenario_preset(scenario_value)
+        for scenario_value, _ in MonitoringProfile.Scenario.choices
+    }
