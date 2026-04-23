@@ -2,9 +2,8 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Prefetch, Q
-from django.http import Http404
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -12,55 +11,137 @@ from django.views.decorators.http import require_POST
 
 from allauth.account.decorators import verified_email_required
 
-from apps.core.services.rate_limits import RateLimitPeriod, check_rate_limit
-from apps.integrations.models import ConnectedSource
-from apps.monitoring.forms import MonitoringProfileCreateForm, MonitoringProfileUpdateForm
-from apps.monitoring.models import Event, MonitoringProfile
-from apps.alerts.models import AlertDelivery
 from apps.ai.services.usage import (
     get_profile_daily_ai_usage,
     get_user_daily_ai_usage,
 )
+from apps.alerts.models import AlertDelivery
+from apps.core.services.rate_limits import RateLimitPeriod, check_rate_limit
+from apps.integrations.models import ConnectedSource
+from apps.monitoring.forms import (
+    MonitoringProfileCreateForm,
+    MonitoringProfileUpdateForm,
+)
+from apps.monitoring.models import Event, MonitoringProfile
+
+
+def _user_has_monitoring_profiles(user) -> bool:
+    """Return True when the authenticated user already has at least one profile."""
+
+    return MonitoringProfile.objects.filter(owner=user).exists()
+
+
+def _handle_profile_create_request(
+    request: HttpRequest,
+    *,
+    success_redirect_name: str,
+) -> HttpResponse | tuple[MonitoringProfileCreateForm, None]:
+    """Validate and save a monitoring profile create form.
+
+    Returns:
+    - redirect response on successful create
+    - (form, None) when the form must be rendered back with errors
+    """
+
+    form = MonitoringProfileCreateForm(request.POST)
+
+    if not form.is_valid():
+        return form, None
+
+    profile_create_limit = check_rate_limit(
+        name="registered-profile-create",
+        actor=request.user.id,
+        limit=settings.REGISTERED_PROFILE_CREATE_LIMIT_PER_DAY,
+        period=RateLimitPeriod.DAY,
+    )
+
+    if not profile_create_limit.allowed:
+        form.add_error(
+            None,
+            "Profile creation limit reached. Please try again later.",
+        )
+        return form, None
+
+    profile = form.save(owner=request.user)
+    source = form.connected_source
+
+    messages.success(
+        request,
+        (
+            "Monitoring profile created. "
+            f"Telegram source #{source.id} is active."
+        ),
+    )
+
+    return redirect(success_redirect_name)
 
 
 @verified_email_required
-def dashboard_view(request):
-    """Show dashboard and allow creating a monitoring profile."""
+def onboarding_view(request: HttpRequest) -> HttpResponse:
+    """Create the first monitoring profile right after signup."""
+
+    if _user_has_monitoring_profiles(request.user):
+        return redirect("dashboard")
 
     if request.method == "POST":
-        profile_form = MonitoringProfileCreateForm(request.POST)
+        result = _handle_profile_create_request(
+            request,
+            success_redirect_name="dashboard",
+        )
 
-        if profile_form.is_valid():
-            profile_create_limit = check_rate_limit(
-                name="registered-profile-create",
-                actor=request.user.id,
-                limit=settings.REGISTERED_PROFILE_CREATE_LIMIT_PER_DAY,
-                period=RateLimitPeriod.DAY,
-            )
+        if not isinstance(result, tuple):
+            return result
 
-            if not profile_create_limit.allowed:
-                profile_form.add_error(
-                    None,
-                    (
-                        "Profile creation limit reached. "
-                        "Please try again later."
-                    ),
-                )
-            else:
-                profile = profile_form.save(owner=request.user)
-                source = profile_form.connected_source
-
-                messages.success(
-                    request,
-                    (
-                        "Monitoring profile created. "
-                        f"Telegram source #{source.id} is active."
-                    ),
-                )
-
-                return redirect("dashboard")
+        form, _ = result
     else:
-        profile_form = MonitoringProfileCreateForm()
+        form = MonitoringProfileCreateForm()
+
+    return render(
+        request,
+        "monitoring/onboarding.html",
+        {
+            "form": form,
+            "is_onboarding": True,
+        },
+    )
+
+
+@verified_email_required
+def profile_create_view(request: HttpRequest) -> HttpResponse:
+    """Create an additional monitoring profile after onboarding."""
+
+    if not _user_has_monitoring_profiles(request.user):
+        return redirect("onboarding")
+
+    if request.method == "POST":
+        result = _handle_profile_create_request(
+            request,
+            success_redirect_name="dashboard",
+        )
+
+        if not isinstance(result, tuple):
+            return result
+
+        form, _ = result
+    else:
+        form = MonitoringProfileCreateForm()
+
+    return render(
+        request,
+        "monitoring/profile_create.html",
+        {
+            "form": form,
+            "is_onboarding": False,
+        },
+    )
+
+
+@verified_email_required
+def dashboard_view(request: HttpRequest) -> HttpResponse:
+    """Show dashboard with monitoring stats and profile cards."""
+
+    if not _user_has_monitoring_profiles(request.user):
+        return redirect("onboarding")
 
     today_start = timezone.localtime(timezone.now()).replace(
         hour=0,
@@ -160,11 +241,9 @@ def dashboard_view(request):
             "stats": stats,
             "user_ai_usage": user_ai_usage,
             "profiles": profiles,
-            "profile_form": profile_form,
             "profiles_count": profiles_count,
             "active_profiles_count": active_profiles_count,
             "disabled_profiles_count": disabled_profiles_count,
-            "open_profile_modal": request.method == "POST" and profile_form.errors,
         },
     )
 

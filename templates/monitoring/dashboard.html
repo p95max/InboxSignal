@@ -10,13 +10,10 @@
         <p>Events that need attention across your monitoring profiles.</p>
     </div>
 
-    <button
-        type="button"
-        class="button button-primary"
-        onclick="document.getElementById('profile-create-modal').showModal()"
-    >
-        Add monitoring profile
-    </button>
+<a class="button button-primary" href="{% url 'profile_create' %}">
+    Add monitoring profile
+</a>
+
 </div>
 
 <section class="grid grid-4">
@@ -191,13 +188,9 @@
     {% else %}
         <div class="card empty-state">
             <p>No monitoring profiles yet.</p>
-            <button
-                type="button"
-                class="button button-primary"
-                onclick="document.getElementById('profile-create-modal').showModal()"
-            >
+            <a class="button button-primary" href="{% url 'profile_create' %}">
                 Create first profile
-            </button>
+            </a>
         </div>
     {% endif %}
 </section>

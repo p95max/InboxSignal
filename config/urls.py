@@ -8,7 +8,7 @@ from apps.monitoring.views import (
     dashboard_view,
     event_action_view,
     profile_delete_view,
-    profile_detail_view,
+    profile_detail_view, onboarding_view, profile_create_view,
 )
 
 urlpatterns = [
@@ -21,6 +21,8 @@ urlpatterns = [
         profile_delete_view,
         name="profile_delete",
     ),
+    path("onboarding/", onboarding_view, name="onboarding"),
+    path("profiles/create/", profile_create_view, name="profile_create"),
     path("events/<uuid:event_id>/<str:action>/", event_action_view, name="event_action"),
 
     # Backward-compatible short names used by existing templates.

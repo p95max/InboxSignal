@@ -7,4 +7,4 @@ class AccountAdapter(DefaultAccountAdapter):
 
     def get_email_verification_redirect_url(self, email_address):
         """Redirect users after successful email verification."""
-        return reverse("dashboard")
+        return reverse("onboarding")
