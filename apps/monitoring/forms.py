@@ -8,6 +8,7 @@ from django.db import transaction
 
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.models import MonitoringProfile
+from apps.monitoring.services.scenario_presets import get_scenario_preset
 
 
 TELEGRAM_BOT_TOKEN_RE = re.compile(r"^\d{5,}:[A-Za-z0-9_-]{20,}$")
@@ -148,6 +149,22 @@ class MonitoringProfileConstructorMixin:
 
         return value
 
+    def apply_scenario_preset_to_profile(self, profile: MonitoringProfile) -> None:
+        """Apply scenario defaults without overwriting explicit user choices."""
+
+        if profile.scenario == MonitoringProfile.Scenario.CUSTOM:
+            return
+
+        preset = get_scenario_preset(profile.scenario)
+
+        for field_name, value in preset.items():
+            # If the field exists in the form and the user explicitly changed it,
+            # keep the user's value.
+            if field_name in self.fields and field_name in self.changed_data:
+                continue
+
+            setattr(profile, field_name, value)
+
 
 class MonitoringProfileCreateForm(
     MonitoringProfileConstructorMixin,
@@ -213,6 +230,9 @@ class MonitoringProfileCreateForm(
         profile = super().save(commit=False)
         profile.owner = owner
         profile.status = MonitoringProfile.Status.ACTIVE
+
+        self.apply_scenario_preset_to_profile(profile)
+
         profile.full_clean()
         profile.save()
 
