@@ -26,7 +26,7 @@ This is **not** a chat client and **not** a CRM. It is a message triage and aler
 - webhook-based ingestion with additional `X-Telegram-Bot-Api-Secret-Token` validation
 - polling mode for local development
 - background processing with Celery + Redis
-- rules-first analysis with optional AI enrichment
+- rules-first analysis with `optional AI enrichment`
 - event creation with priority scoring
 - Telegram alert delivery
 - customer auto-replies and anti-spam limits
@@ -131,6 +131,35 @@ docker compose run --rm -e RUN_MIGRATIONS=0 web pytest tests/integrations/test_t
 
 ## Telegram integration
 
+### Polling mode (RECOMMENDED)
+
+Use polling for local development when no public HTTPS URL is available.
+
+Disable webhook first:
+
+```bash
+docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhook delete \
+  --source-id 1 \
+  --drop-pending-updates
+```
+
+Start polling:
+
+```bash
+docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_poll \
+  --source-id 1
+```
+
+One-time polling check:
+
+```bash
+docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_poll \
+  --source-id 1 \
+  --once
+```
+
+---
+
 ### Webhook mode
 
 Use webhook mode when you have a public HTTPS URL.
@@ -157,33 +186,6 @@ Delete webhook:
 docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhook delete \
   --source-id 1 \
   --drop-pending-updates
-```
-
-### Polling mode
-
-Use polling for local development when no public HTTPS URL is available.
-
-Disable webhook first:
-
-```bash
-docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhook delete \
-  --source-id 1 \
-  --drop-pending-updates
-```
-
-Start polling:
-
-```bash
-docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_poll \
-  --source-id 1
-```
-
-One-time polling check:
-
-```bash
-docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_poll \
-  --source-id 1 \
-  --once
 ```
 
 ## Security notes
