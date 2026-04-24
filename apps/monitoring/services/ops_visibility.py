@@ -40,7 +40,7 @@ def get_ops_visibility_snapshot() -> dict:
         "cards": {
             "failed_alert_deliveries_today": AlertDelivery.objects.filter(
                 status=AlertDelivery.Status.FAILED,
-                created_at__gte=today_start,
+                failed_at__gte=today_start,
             ).count(),
             "failed_alert_deliveries_total": AlertDelivery.objects.filter(
                 status=AlertDelivery.Status.FAILED,

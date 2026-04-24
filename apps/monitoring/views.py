@@ -8,7 +8,7 @@ from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from allauth.account.decorators import verified_email_required
 
@@ -737,6 +737,7 @@ def event_action_view(request, event_id, action: str):
 
 
 @staff_member_required
+@require_GET
 def ops_visibility_view(request: HttpRequest) -> HttpResponse:
     """Render staff-only internal ops visibility screen."""
 
@@ -789,6 +790,7 @@ def ops_visibility_view(request: HttpRequest) -> HttpResponse:
 
 
 @staff_member_required
+@require_GET
 def ops_visibility_summary_api(request: HttpRequest) -> JsonResponse:
     """Return staff-only internal ops visibility summary as JSON."""
 

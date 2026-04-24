@@ -2,8 +2,8 @@ from datetime import timedelta
 
 import pytest
 from allauth.account.models import EmailAddress
-from django.urls import reverse
 from django.core.cache import cache
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -16,9 +16,11 @@ from apps.core.services.ops_metrics import (
 )
 from apps.monitoring.models import Event, IncomingMessage, MonitoringProfile
 
+
 @pytest.fixture(autouse=True)
 def clear_cache():
     cache.clear()
+
 
 @pytest.fixture
 def staff_user(db):
@@ -64,7 +66,6 @@ def profile(staff_user):
     )
 
 
-
 @pytest.fixture
 def incoming_message(profile):
     return IncomingMessage.objects.create(
@@ -92,6 +93,28 @@ def event(profile, incoming_message):
     )
 
 
+def create_failed_alert_delivery(
+    *,
+    profile,
+    event,
+    error_message="Telegram API error",
+):
+    alert = AlertDelivery.objects.create(
+        profile=profile,
+        event=event,
+        status=AlertDelivery.Status.PENDING,
+        channel=AlertDelivery.Channel.TELEGRAM,
+        delivery_type=AlertDelivery.DeliveryType.INSTANT,
+        recipient="123456",
+        attempts=2,
+        max_attempts=3,
+    )
+
+    alert.mark_failed(error_message)
+
+    return alert
+
+
 @pytest.mark.django_db
 def test_ops_visibility_requires_staff(client, regular_user):
     client.force_login(regular_user)
@@ -109,15 +132,9 @@ def test_ops_visibility_renders_summary_for_staff(
     incoming_message,
     event,
 ):
-    AlertDelivery.objects.create(
+    create_failed_alert_delivery(
         profile=profile,
         event=event,
-        status=AlertDelivery.Status.FAILED,
-        channel=AlertDelivery.Channel.TELEGRAM,
-        delivery_type=AlertDelivery.DeliveryType.INSTANT,
-        recipient="123456",
-        attempts=3,
-        max_attempts=3,
         error_message="Telegram API error: chat not found",
     )
 
@@ -185,15 +202,9 @@ def test_ops_visibility_summary_api_returns_counts(
     incoming_message,
     event,
 ):
-    AlertDelivery.objects.create(
+    create_failed_alert_delivery(
         profile=profile,
         event=event,
-        status=AlertDelivery.Status.FAILED,
-        channel=AlertDelivery.Channel.TELEGRAM,
-        delivery_type=AlertDelivery.DeliveryType.INSTANT,
-        recipient="123456",
-        attempts=3,
-        max_attempts=3,
         error_message="Telegram API error",
     )
 
