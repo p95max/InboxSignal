@@ -176,6 +176,7 @@ def handle_telegram_system_command(
         bind_telegram_alert_chat(
             source=source,
             chat_id=parsed_message.external_chat_id,
+            command_text=parsed_message.text,
         )
         return
 
@@ -300,48 +301,79 @@ def bind_telegram_alert_chat(
     *,
     source: ConnectedSource,
     chat_id: str,
+    command_text: str = "",
 ) -> None:
-    """Bind current Telegram chat as alert destination."""
+    """Bind current Telegram chat as alert destination using setup token."""
 
     metadata = source.metadata or {}
     current_alert_chat_id = str(metadata.get("alert_chat_id", "")).strip()
-    new_alert_chat_id = str(chat_id).strip()
+    expected_token = str(metadata.get("alert_setup_token", "")).strip()
+    provided_token = extract_command_argument(command_text)
+    request_chat_id = str(chat_id).strip()
 
-    if current_alert_chat_id == new_alert_chat_id:
-        text = (
-            "✅ Alerts are already enabled for this chat.\n\n"
-            "Future monitoring alerts will be sent here."
+    if current_alert_chat_id == request_chat_id:
+        send_telegram_bot_message(
+            source=source,
+            chat_id=request_chat_id,
+            text=(
+                "✅ Alerts are already enabled for this chat.\n\n"
+                "Future monitoring alerts and digests will be sent here."
+            ),
         )
+        return
 
-    elif current_alert_chat_id:
-        text = (
-            "⚠️ Alerts are already configured for another chat.\n\n"
-            "Change Alert destination chat ID in the dashboard if you want to replace it."
+    if current_alert_chat_id:
+        send_telegram_bot_message(
+            source=source,
+            chat_id=request_chat_id,
+            text=(
+                "⛔ Alerts are already configured for another chat.\n\n"
+                "Change Alert destination chat ID in the dashboard if you want to replace it."
+            ),
         )
+        return
 
-    else:
-        metadata["alert_chat_id"] = new_alert_chat_id
-        source.metadata = metadata
-        source.save(update_fields=["metadata", "updated_at"])
-
-        text = (
-            "✅ Alerts have been enabled for this chat.\n\n"
-            "Future monitoring alerts will be sent here."
+    if not expected_token:
+        send_telegram_bot_message(
+            source=source,
+            chat_id=request_chat_id,
+            text=(
+                "⚠️ Alert setup token is missing.\n\n"
+                "Open the dashboard and regenerate the alert setup command."
+            ),
         )
+        return
 
-        logger.info(
-            "telegram_alert_chat_auto_bound",
-            extra={
-                "source_id": source.id,
-                "profile_id": source.profile_id,
-                "chat_id": new_alert_chat_id,
-            },
+    if provided_token != expected_token:
+        send_telegram_bot_message(
+            source=source,
+            chat_id=request_chat_id,
+            text="⛔ Invalid alert setup token.",
         )
+        return
+
+    metadata["alert_chat_id"] = request_chat_id
+    metadata.pop("alert_setup_token", None)
+
+    source.metadata = metadata
+    source.save(update_fields=["metadata", "updated_at"])
 
     send_telegram_bot_message(
         source=source,
-        chat_id=new_alert_chat_id,
-        text=text,
+        chat_id=request_chat_id,
+        text=(
+            "✅ Alerts have been enabled for this chat.\n\n"
+            "Future monitoring alerts and digests will be sent here."
+        ),
+    )
+
+    logger.info(
+        "telegram_alert_chat_bound_with_setup_token",
+        extra={
+            "source_id": source.id,
+            "profile_id": source.profile_id,
+            "chat_id": request_chat_id,
+        },
     )
 
 
@@ -490,3 +522,14 @@ def parse_telegram_timestamp(timestamp: int | None) -> datetime | None:
         return None
 
     return datetime.fromtimestamp(timestamp, tz=dt_timezone.utc)
+
+
+def extract_command_argument(text: str) -> str:
+    """Return first argument after Telegram command."""
+
+    parts = (text or "").strip().split(maxsplit=1)
+
+    if len(parts) < 2:
+        return ""
+
+    return parts[1].strip()

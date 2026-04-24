@@ -140,12 +140,11 @@ class MonitoringProfileConstructorMixin:
             )
             digest_interval.widget.attrs.setdefault("data-digest-interval", "true")
 
-
         alert_chat_id = self.fields.get("alert_chat_id")
         if alert_chat_id:
             alert_chat_id.help_text = (
-                "Optional. Enter Telegram chat ID for alerts, or after profile creation "
-                "send `/start_alerts` to your bot from the destination chat."
+                "Optional. Enter Telegram chat ID for alerts. "
+                "If empty, the dashboard will show a secure /start_alerts setup command."
             )
 
     def clean(self):
@@ -195,8 +194,6 @@ class MonitoringProfileConstructorMixin:
         preset = get_scenario_preset(profile.scenario)
 
         for field_name, value in preset.items():
-            # If the field exists in the form and the user explicitly changed it,
-            # keep the user's value.
             if field_name in self.fields and field_name in self.changed_data:
                 continue
 
@@ -285,7 +282,14 @@ class MonitoringProfileCreateForm(
         profile.save()
 
         token = self.cleaned_data["telegram_bot_token"]
-        alert_chat_id = self.cleaned_data.get("alert_chat_id", "")
+        alert_chat_id = self.cleaned_data.get("alert_chat_id", "").strip()
+
+        metadata = {
+            "alert_chat_id": alert_chat_id,
+        }
+
+        if not alert_chat_id:
+            metadata["alert_setup_token"] = generate_alert_setup_token()
 
         source = ConnectedSource(
             owner=owner,
@@ -296,9 +300,7 @@ class MonitoringProfileCreateForm(
             external_id=extract_bot_id_from_token(token),
             webhook_secret=generate_webhook_secret(),
             webhook_secret_token=generate_webhook_secret(),
-            metadata={
-                "alert_chat_id": alert_chat_id,
-            },
+            metadata=metadata,
         )
         source.set_credentials(token)
         source.full_clean()
@@ -439,6 +441,11 @@ class MonitoringProfileUpdateForm(
             metadata = source.metadata or {}
             metadata["alert_chat_id"] = alert_chat_id
 
+            if alert_chat_id:
+                metadata.pop("alert_setup_token", None)
+            elif not metadata.get("alert_setup_token"):
+                metadata["alert_setup_token"] = generate_alert_setup_token()
+
             source.metadata = metadata
             source.save(update_fields=["metadata", "updated_at"])
 
@@ -459,3 +466,13 @@ def generate_webhook_secret() -> str:
 
         if not ConnectedSource.objects.filter(webhook_secret=secret).exists():
             return secret
+
+
+def generate_alert_setup_token() -> str:
+    """Generate a random Telegram alert setup token.
+
+    The token is validated within a specific ConnectedSource metadata payload,
+    so global database uniqueness is not required.
+    """
+
+    return secrets.token_urlsafe(32)

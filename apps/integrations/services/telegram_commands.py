@@ -2,6 +2,7 @@ START_COMMAND = "/start"
 ALERTS_START_COMMAND = "/start_alerts"
 DIGEST_COMMAND = "/digest"
 
+
 def is_system_command(text: str) -> bool:
     """Return True for commands that should bypass customer flow."""
 
@@ -11,17 +12,6 @@ def is_system_command(text: str) -> bool:
         or is_digest_command(text)
     )
 
-
-
-def normalize_telegram_command(text: str) -> str:
-    """Return normalized Telegram command without bot mention or arguments."""
-
-    first_token = (text or "").strip().split(maxsplit=1)[0].lower()
-
-    if "@" in first_token:
-        first_token = first_token.split("@", 1)[0]
-
-    return first_token
 
 
 def is_start_command(text: str) -> bool:
@@ -40,3 +30,16 @@ def is_digest_command(text: str) -> bool:
     """Return True only for Telegram /digest command."""
 
     return normalize_telegram_command(text) == DIGEST_COMMAND
+
+
+
+# Helpers
+def normalize_telegram_command(text: str) -> str:
+    """Return normalized Telegram command without bot mention or arguments."""
+
+    first_token = (text or "").strip().split(maxsplit=1)[0].lower()
+
+    if "@" in first_token:
+        first_token = first_token.split("@", 1)[0]
+
+    return first_token
