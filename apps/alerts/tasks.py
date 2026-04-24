@@ -10,6 +10,12 @@ from apps.alerts.services.telegram_delivery import (
     NonRetryableAlertDeliveryError,
     send_telegram_alert,
 )
+from django.core.cache import cache
+
+from apps.alerts.services.digest import (
+    create_digest_deliveries_for_period,
+    get_previous_hour_digest_period,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -30,6 +36,7 @@ def send_alert_delivery_task(self, alert_id: str) -> str | None:
     try:
         alert = (
             AlertDelivery.objects.select_related(
+                "profile",
                 "event",
                 "event__incoming_message",
                 "event__incoming_message__source",
@@ -125,3 +132,69 @@ def send_alert_delivery_task(self, alert_id: str) -> str | None:
             raise self.retry(exc=exc, countdown=countdown)
 
         return None
+
+
+DIGEST_BUILD_LOCK_TTL_SECONDS = 10 * 60
+
+
+@shared_task(bind=True)
+def build_and_enqueue_digest_notifications_task(self) -> int:
+    """Build hourly digest notifications and enqueue newly created deliveries."""
+
+    period = get_previous_hour_digest_period()
+    lock_key = build_digest_period_lock_key(
+        period_start=period.start,
+        period_end=period.end,
+    )
+
+    if not cache.add(lock_key, "1", timeout=DIGEST_BUILD_LOCK_TTL_SECONDS):
+        logger.info(
+            "digest_build_skipped_locked",
+            extra={
+                "task_id": self.request.id,
+                "lock_key": lock_key,
+                "period_start": period.start.isoformat(),
+                "period_end": period.end.isoformat(),
+            },
+        )
+        return 0
+
+    results = create_digest_deliveries_for_period(period=period)
+
+    enqueued_count = 0
+
+    for result in results:
+        if not result.created or result.alert is None:
+            continue
+
+        send_alert_delivery_task.delay(str(result.alert.id))
+        enqueued_count += 1
+
+    logger.info(
+        "digest_build_finished",
+        extra={
+            "task_id": self.request.id,
+            "period_start": period.start.isoformat(),
+            "period_end": period.end.isoformat(),
+            "created_count": sum(1 for item in results if item.created),
+            "enqueued_count": enqueued_count,
+        },
+    )
+
+    return enqueued_count
+
+
+def build_digest_period_lock_key(
+    *,
+    period_start,
+    period_end,
+) -> str:
+    """Build Redis lock key for one digest period build run."""
+
+    return ":".join(
+        [
+            "digest-build-lock",
+            period_start.isoformat(),
+            period_end.isoformat(),
+        ]
+    )

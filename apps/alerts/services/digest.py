@@ -1,0 +1,306 @@
+import logging
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+
+from django.conf import settings
+from django.db import transaction
+from django.utils import timezone
+
+from apps.alerts.models import AlertDelivery
+from apps.integrations.models import ConnectedSource
+from apps.monitoring.models import Event, MonitoringProfile
+
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class DigestPeriod:
+    """Digest window represented as a half-open interval [start, end)."""
+
+    start: datetime
+    end: datetime
+
+
+@dataclass(frozen=True)
+class DigestBuildResult:
+    """Result of digest delivery creation."""
+
+    alert: AlertDelivery | None
+    created: bool = False
+
+
+def get_previous_hour_digest_period(reference_time=None) -> DigestPeriod:
+    """Return the previous completed hourly digest period.
+
+    Example:
+    - reference_time = 11:05
+    - period = [10:00, 11:00)
+    """
+
+    now = timezone.localtime(reference_time or timezone.now())
+
+    period_end = now.replace(
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+    period_start = period_end - timedelta(hours=1)
+
+    return DigestPeriod(
+        start=period_start,
+        end=period_end,
+    )
+
+
+def create_digest_deliveries_for_period(
+    *,
+    period: DigestPeriod,
+) -> list[DigestBuildResult]:
+    """Create digest alert deliveries for all active profiles with Telegram alerts."""
+
+    if not settings.DIGEST_NOTIFICATIONS_ENABLED:
+        logger.info("digest_notifications_disabled")
+        return []
+
+    results = []
+
+    sources = (
+        ConnectedSource.objects.select_related("profile", "owner")
+        .filter(
+            source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+            status=ConnectedSource.Status.ACTIVE,
+            is_deleted=False,
+            profile__status=MonitoringProfile.Status.ACTIVE,
+        )
+        .order_by("profile_id", "id")
+    )
+
+    for source in sources:
+        recipient = get_digest_recipient(source)
+
+        if not recipient:
+            continue
+
+        result = create_digest_delivery_for_source(
+            source=source,
+            recipient=recipient,
+            period=period,
+        )
+
+        if result.alert is not None:
+            results.append(result)
+
+    logger.info(
+        "digest_deliveries_built",
+        extra={
+            "period_start": period.start.isoformat(),
+            "period_end": period.end.isoformat(),
+            "deliveries_total": len(results),
+            "deliveries_created": sum(1 for item in results if item.created),
+        },
+    )
+
+    return results
+
+
+def create_digest_delivery_for_source(
+    *,
+    source: ConnectedSource,
+    recipient: str,
+    period: DigestPeriod,
+) -> DigestBuildResult:
+    """Create one digest delivery for a Telegram alert source."""
+
+    events = list(
+        get_digest_events_for_profile(
+            profile=source.profile,
+            period=period,
+        )
+    )
+
+    if not events:
+        return DigestBuildResult(alert=None, created=False)
+
+    representative_event = events[0]
+    idempotency_key = build_digest_idempotency_key(
+        profile_id=source.profile_id,
+        source_id=source.id,
+        recipient=recipient,
+        period=period,
+    )
+
+    payload = build_digest_payload(
+        source=source,
+        recipient=recipient,
+        period=period,
+        events=events,
+    )
+
+    with transaction.atomic():
+        alert, created = AlertDelivery.objects.get_or_create(
+            idempotency_key=idempotency_key,
+            defaults={
+                "profile": source.profile,
+                "event": representative_event,
+                "channel": AlertDelivery.Channel.TELEGRAM,
+                "delivery_type": AlertDelivery.DeliveryType.DIGEST,
+                "status": AlertDelivery.Status.PENDING,
+                "recipient": recipient,
+                "payload": payload,
+            },
+        )
+
+    logger.info(
+        "digest_delivery_created" if created else "digest_delivery_reused",
+        extra={
+            "alert_id": str(alert.id),
+            "profile_id": source.profile_id,
+            "source_id": source.id,
+            "recipient": recipient,
+            "period_start": period.start.isoformat(),
+            "period_end": period.end.isoformat(),
+            "events_count": len(events),
+            "delivery_created": created,
+        },
+    )
+
+    return DigestBuildResult(alert=alert, created=created)
+
+
+def get_digest_events_for_profile(
+    *,
+    profile: MonitoringProfile,
+    period: DigestPeriod,
+):
+    """Return NEW important/urgent events for the digest period."""
+
+    return (
+        Event.objects.select_related(
+            "profile",
+            "incoming_message",
+            "incoming_message__external_contact",
+        )
+        .filter(
+            profile=profile,
+            status=Event.Status.NEW,
+            priority__in=[
+                Event.Priority.IMPORTANT,
+                Event.Priority.URGENT,
+            ],
+            created_at__gte=period.start,
+            created_at__lt=period.end,
+        )
+        .order_by("-priority_score", "-created_at")[
+            : settings.DIGEST_MAX_EVENTS_PER_NOTIFICATION
+        ]
+    )
+
+
+def get_digest_recipient(source: ConnectedSource) -> str:
+    """Return Telegram alert chat id configured for digest delivery."""
+
+    metadata = source.metadata or {}
+
+    return str(metadata.get("alert_chat_id", "")).strip()
+
+
+def build_digest_idempotency_key(
+    *,
+    profile_id: int,
+    source_id: int,
+    recipient: str,
+    period: DigestPeriod,
+) -> str:
+    """Build deterministic idempotency key for one digest period."""
+
+    return ":".join(
+        [
+            "digest",
+            "telegram",
+            str(profile_id),
+            str(source_id),
+            recipient or "no-recipient",
+            period.start.isoformat(),
+            period.end.isoformat(),
+        ]
+    )
+
+
+def build_digest_payload(
+    *,
+    source: ConnectedSource,
+    recipient: str,
+    period: DigestPeriod,
+    events: list[Event],
+) -> dict:
+    """Build provider-agnostic digest payload."""
+
+    urgent_count = sum(1 for event in events if event.priority == Event.Priority.URGENT)
+    important_count = sum(
+        1 for event in events if event.priority == Event.Priority.IMPORTANT
+    )
+
+    return {
+        "type": "events_digest_v1",
+        "profile_id": source.profile_id,
+        "source_id": source.id,
+        "recipient": recipient,
+        "period_start": period.start.isoformat(),
+        "period_end": period.end.isoformat(),
+        "counts": {
+            "total": len(events),
+            "urgent": urgent_count,
+            "important": important_count,
+        },
+        "event_ids": [str(event.id) for event in events],
+        "events": [serialize_digest_event(event) for event in events],
+    }
+
+
+def serialize_digest_event(event: Event) -> dict:
+    """Serialize one event for digest notification payload."""
+
+    incoming_message = event.incoming_message
+    contact_label = "Unknown contact"
+
+    if incoming_message:
+        contact = incoming_message.external_contact
+
+        if contact:
+            contact_label = (
+                contact.display_name
+                or (f"@{contact.username}" if contact.username else "")
+                or contact.external_user_id
+                or contact.external_chat_id
+                or "Unknown contact"
+            )
+        else:
+            contact_label = (
+                incoming_message.sender_display_name
+                or (
+                    f"@{incoming_message.sender_username}"
+                    if incoming_message.sender_username
+                    else ""
+                )
+                or incoming_message.sender_id
+                or incoming_message.external_chat_id
+                or "Unknown contact"
+            )
+
+    message_preview = (event.message_text_snapshot or "").strip()
+
+    if len(message_preview) > 140:
+        message_preview = f"{message_preview[:140].rstrip()}..."
+
+    return {
+        "id": str(event.id),
+        "created_at": event.created_at.isoformat(),
+        "category": event.category,
+        "priority": event.priority,
+        "priority_score": event.priority_score,
+        "title": event.title,
+        "summary": event.summary,
+        "contact_label": contact_label,
+        "message_preview": message_preview,
+    }

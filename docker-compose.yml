@@ -31,6 +31,21 @@ services:
       - db
       - redis
 
+  celery_beat:
+    environment:
+      RUN_MIGRATIONS: "0"
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+    command: celery -A config beat -l info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
   db:
     image: postgres:16
     environment:

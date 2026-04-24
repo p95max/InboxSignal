@@ -1,5 +1,6 @@
 from decimal import Decimal
 from pathlib import Path
+from celery.schedules import crontab
 
 import environ
 
@@ -259,6 +260,13 @@ CELERY_RESULT_BACKEND = env(
     default="redis://redis:6379/1",
 )
 
+CELERY_BEAT_SCHEDULE = {
+    "build-hourly-digest-notifications": {
+        "task": "apps.alerts.tasks.build_and_enqueue_digest_notifications_task",
+        "schedule": crontab(minute=5),
+    },
+}
+
 
 # ==============================================================================
 # Security / Encryption
@@ -385,6 +393,16 @@ ALERT_COOLDOWN_URGENT_SECONDS = env.int(
 ALERT_COOLDOWN_IMPORTANT_SECONDS = env.int(
     "ALERT_COOLDOWN_IMPORTANT_SECONDS",
     default=0,
+)
+
+DIGEST_NOTIFICATIONS_ENABLED = env.bool(
+    "DIGEST_NOTIFICATIONS_ENABLED",
+    default=True,
+)
+
+DIGEST_MAX_EVENTS_PER_NOTIFICATION = env.int(
+    "DIGEST_MAX_EVENTS_PER_NOTIFICATION",
+    default=20,
 )
 
 

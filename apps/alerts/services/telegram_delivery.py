@@ -1,6 +1,7 @@
 import httpx
 
 from apps.alerts.models import AlertDelivery
+from apps.integrations.models import ConnectedSource
 
 
 TELEGRAM_API_BASE_URL = "https://api.telegram.org"
@@ -21,6 +22,9 @@ def send_telegram_alert(alert: AlertDelivery) -> AlertDelivery:
         raise NonRetryableAlertDeliveryError(
             f"Unsupported alert channel: {alert.channel}"
         )
+
+    if alert.delivery_type == AlertDelivery.DeliveryType.DIGEST:
+        return send_telegram_digest_alert(alert)
 
     if alert.status != AlertDelivery.Status.PENDING:
         return alert
@@ -192,3 +196,120 @@ def telegram_send_message(
         raise AlertDeliveryError(f"Telegram API error: {description}")
 
     return response_data
+
+
+def send_telegram_digest_alert(alert: AlertDelivery) -> AlertDelivery:
+    """Send one Telegram digest alert."""
+
+    if alert.status != AlertDelivery.Status.PENDING:
+        return alert
+
+    if not alert.recipient:
+        raise NonRetryableAlertDeliveryError("Telegram digest recipient is empty.")
+
+    source_id = alert.payload.get("source_id")
+
+    if not source_id:
+        raise NonRetryableAlertDeliveryError("Telegram digest source_id is missing.")
+
+    source = (
+        ConnectedSource.objects.filter(
+            id=source_id,
+            source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+            status=ConnectedSource.Status.ACTIVE,
+            is_deleted=False,
+        )
+        .first()
+    )
+
+    if source is None:
+        raise NonRetryableAlertDeliveryError("Telegram digest source was not found.")
+
+    bot_token = source.get_credentials()
+
+    if not bot_token:
+        raise NonRetryableAlertDeliveryError("Telegram bot token is not configured.")
+
+    text = build_telegram_digest_text(alert)
+
+    response_payload = telegram_send_message(
+        bot_token=bot_token,
+        chat_id=alert.recipient,
+        text=text,
+    )
+
+    result = response_payload.get("result") or {}
+    provider_message_id = str(result.get("message_id", ""))
+
+    alert.mark_sent(
+        provider_message_id=provider_message_id,
+        response_payload=response_payload,
+    )
+
+    return alert
+
+
+def build_telegram_digest_text(alert: AlertDelivery) -> str:
+    """Build compact Telegram digest text."""
+
+    payload = alert.payload or {}
+    counts = payload.get("counts") or {}
+    events = payload.get("events") or []
+
+    total = counts.get("total", 0)
+    urgent = counts.get("urgent", 0)
+    important = counts.get("important", 0)
+
+    period_start = payload.get("period_start", "")
+    period_end = payload.get("period_end", "")
+
+    parts = [
+        "🧾 Monitoring digest",
+        "",
+        f"🗂 Profile: {alert.profile.name}",
+        f"🕒 Period: {period_start} — {period_end}",
+        f"📌 New events: {total}",
+        f"🔴 Urgent: {urgent}",
+        f"🟡 Important: {important}",
+    ]
+
+    if events:
+        parts.append("")
+        parts.append("Top events:")
+
+    for index, event in enumerate(events[:10], start=1):
+        title = event.get("title") or (
+            f"{event.get('priority', '').title()} {event.get('category', '').title()}"
+        )
+        contact_label = event.get("contact_label") or "Unknown contact"
+        summary = event.get("summary") or event.get("message_preview") or ""
+
+        if len(summary) > 180:
+            summary = f"{summary[:180].rstrip()}..."
+
+        parts.extend(
+            [
+                "",
+                f"{index}. {title}",
+                f"   👤 {contact_label}",
+                f"   ⚡ {event.get('priority')} / score {event.get('priority_score')}",
+            ]
+        )
+
+        if summary:
+            parts.append(f"   📝 {summary}")
+
+    if total > 10:
+        parts.extend(
+            [
+                "",
+                f"…and {total - 10} more events.",
+            ]
+        )
+
+    text = "\n".join(parts)
+
+    if len(text) > 3900:
+        text = f"{text[:3900].rstrip()}\n\n…digest was truncated."
+
+    return text
