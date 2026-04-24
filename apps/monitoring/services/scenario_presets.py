@@ -18,6 +18,7 @@ SCENARIO_PRESETS = {
         "extract_contact": True,
         "extract_budget": True,
         "extract_product_or_service": True,
+        "extract_date_or_time": True,
     },
     MonitoringProfile.Scenario.COMPLAINTS: {
         "track_leads": False,
@@ -35,6 +36,7 @@ SCENARIO_PRESETS = {
         "extract_contact": True,
         "extract_budget": False,
         "extract_product_or_service": True,
+        "extract_date_or_time": True,
     },
     MonitoringProfile.Scenario.BOOKING: {
         "track_leads": False,
@@ -52,6 +54,7 @@ SCENARIO_PRESETS = {
         "extract_contact": True,
         "extract_budget": False,
         "extract_product_or_service": True,
+        "extract_date_or_time": True,
     },
     MonitoringProfile.Scenario.URGENT: {
         "track_leads": False,
@@ -69,6 +72,7 @@ SCENARIO_PRESETS = {
         "extract_contact": True,
         "extract_budget": False,
         "extract_product_or_service": True,
+        "extract_date_or_time": True,
     },
     MonitoringProfile.Scenario.GENERAL: {
         "track_leads": True,
@@ -86,6 +90,7 @@ SCENARIO_PRESETS = {
         "extract_contact": True,
         "extract_budget": True,
         "extract_product_or_service": True,
+        "extract_date_or_time": True,
     },
     MonitoringProfile.Scenario.CUSTOM: {},
 }

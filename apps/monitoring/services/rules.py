@@ -74,15 +74,10 @@ URGENT_KEYWORDS = (
     "urgent",
     "asap",
     "immediately",
-    "deadline",
-    "today",
     "срочно",
     "немедленно",
-    "сегодня",
-    "дедлайн",
     "dringend",
     "sofort",
-    "heute",
 )
 
 DEADLINE_KEYWORDS = (
@@ -206,16 +201,26 @@ def analyze_message_by_rules(
         score = 60
         matched_rules.append("request_keywords")
 
-    if contains_any(normalized_text, URGENT_KEYWORDS):
-        score = max(score, 85)
-        matched_rules.append("urgent_keywords")
+    urgency_matches = collect_urgency_matches(
+        text=normalized_text,
+        category=category,
+        profile=profile,
+    )
 
     score = apply_profile_tracking_rules(
         category=category,
         score=score,
         profile=profile,
         matched_rules=matched_rules,
+        allow_urgent_override=bool(urgency_matches),
     )
+
+    if urgency_matches:
+        score = max(score, 85)
+
+        for rule_name in urgency_matches:
+            if rule_name not in matched_rules:
+                matched_rules.append(rule_name)
 
     score = apply_profile_urgency_rules(
         text=normalized_text,
@@ -327,29 +332,36 @@ def apply_profile_tracking_rules(
     score: int,
     profile: MonitoringProfile | None,
     matched_rules: list[str],
+    allow_urgent_override: bool = False,
 ) -> int:
     """Lower score if the profile is not configured to track this category."""
 
     if profile is None:
         return score
 
+    ignored_rule = ""
+
     if category == Event.Category.LEAD and not profile.track_leads:
-        matched_rules.append("profile_ignores_leads")
-        return 0
+        ignored_rule = "profile_ignores_leads"
 
-    if category == Event.Category.COMPLAINT and not profile.track_complaints:
-        matched_rules.append("profile_ignores_complaints")
-        return 0
+    elif category == Event.Category.COMPLAINT and not profile.track_complaints:
+        ignored_rule = "profile_ignores_complaints"
 
-    if category == Event.Category.REQUEST and not profile.track_requests:
-        matched_rules.append("profile_ignores_requests")
-        return 0
+    elif category == Event.Category.REQUEST and not profile.track_requests:
+        ignored_rule = "profile_ignores_requests"
 
-    if category == Event.Category.INFO and not profile.track_general_activity:
-        matched_rules.append("profile_ignores_general_activity")
-        return 0
+    elif category == Event.Category.INFO and not profile.track_general_activity:
+        ignored_rule = "profile_ignores_general_activity"
 
-    return score
+    if not ignored_rule:
+        return score
+
+    if allow_urgent_override and profile.track_urgent:
+        matched_rules.append(f"urgent_override_{ignored_rule}")
+        return score
+
+    matched_rules.append(ignored_rule)
+    return 0
 
 
 def apply_profile_urgency_rules(
@@ -389,6 +401,41 @@ def apply_profile_urgency_rules(
     return score
 
 
+def collect_urgency_matches(
+    *,
+    text: str,
+    category: str,
+    profile: MonitoringProfile | None,
+) -> list[str]:
+    """Return urgency rules matched for the current profile."""
+
+    if profile is not None and not profile.track_urgent:
+        return []
+
+    matched_rules = []
+
+    if contains_any(text, URGENT_KEYWORDS):
+        matched_rules.append("urgent_keywords")
+
+    if profile is None:
+        if contains_any(text, DEADLINE_KEYWORDS):
+            matched_rules.append("deadline_keywords")
+
+        return list(dict.fromkeys(matched_rules))
+
+    if (
+        profile.urgent_negative
+        and category == Event.Category.COMPLAINT
+        and contains_any(text, NEGATIVE_URGENCY_KEYWORDS)
+    ):
+        matched_rules.append("profile_urgent_negative")
+
+    if profile.urgent_deadlines and contains_any(text, DEADLINE_KEYWORDS):
+        matched_rules.append("profile_urgent_deadlines")
+
+    return matched_rules
+
+
 def filter_extracted_data_by_profile(
     *,
     profile: MonitoringProfile | None,
@@ -418,6 +465,9 @@ def filter_extracted_data_by_profile(
 
     if not profile.extract_budget:
         data["budget"] = None
+
+    if not profile.extract_date_or_time:
+        data["date_or_time"] = None
 
     return data
 

@@ -72,6 +72,7 @@ class MonitoringProfile(models.Model):
     extract_contact = models.BooleanField(default=True)
     extract_budget = models.BooleanField(default=True)
     extract_product_or_service = models.BooleanField(default=True)
+    extract_date_or_time = models.BooleanField(default=True)
 
     last_event_at = models.DateTimeField(null=True, blank=True)
 

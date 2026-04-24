@@ -178,6 +178,13 @@
 <div class="form-section">
     <div class="form-section-label">What to extract</div>
 
+    {% if form.extract_date_or_time %}
+        <label class="checkbox-row">
+            {{ form.extract_date_or_time }}
+            <span>{{ form.extract_date_or_time.label }}</span>
+        </label>
+    {% endif %}
+
     <div class="checkbox-grid">
         {% if form.extract_name %}
             <label class="checkbox-row">

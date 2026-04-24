@@ -1,4 +1,6 @@
 import pytest
+import json
+
 from django.urls import reverse
 
 from apps.accounts.models import User
@@ -283,3 +285,41 @@ def test_event_status_endpoint_rejects_foreign_event(
         "ok": False,
         "error": "not_found",
     }
+
+@pytest.mark.django_db
+def test_profile_api_applies_scenario_preset_on_patch(
+    client,
+    user,
+    monitoring_profile,
+):
+    client.force_login(user)
+
+    monitoring_profile.scenario = MonitoringProfile.Scenario.CUSTOM
+    monitoring_profile.track_leads = False
+    monitoring_profile.track_requests = False
+    monitoring_profile.urgent_deadlines = False
+    monitoring_profile.extract_date_or_time = False
+    monitoring_profile.save()
+
+    response = client.patch(
+        reverse(
+            "monitoring:profile_detail_api",
+            kwargs={"profile_id": monitoring_profile.id},
+        ),
+        data=json.dumps(
+            {
+                "scenario": MonitoringProfile.Scenario.BOOKING,
+            }
+        ),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+
+    monitoring_profile.refresh_from_db()
+
+    assert monitoring_profile.scenario == MonitoringProfile.Scenario.BOOKING
+    assert monitoring_profile.track_requests is True
+    assert monitoring_profile.track_urgent is True
+    assert monitoring_profile.urgent_deadlines is True
+    assert monitoring_profile.extract_date_or_time is True

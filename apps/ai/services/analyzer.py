@@ -194,10 +194,18 @@ def build_rule_analysis_from_ai_result(
     category = ai_result.category or Event.Category.INFO
     priority_score = ai_result.priority_score
 
-    if not is_category_enabled(
+    category_enabled = is_category_enabled(
         profile=ai_result.profile,
         category=category,
-    ):
+    )
+
+    urgent_enabled = (
+        ai_result.profile.track_urgent
+        and priority_score >= 80
+        and category != AIAnalysisResult.Category.SPAM
+    )
+
+    if not category_enabled and not urgent_enabled:
         return RuleAnalysisResult(
             category=category,
             priority_score=0,
@@ -228,6 +236,8 @@ def build_rule_analysis_from_ai_result(
             "model_provider": ai_result.model_provider,
             "model_name": ai_result.model_name,
             "prompt_version": ai_result.prompt_version,
+            "category_enabled": category_enabled,
+            "urgent_enabled": urgent_enabled,
         },
         should_create_event=should_create_event,
     )

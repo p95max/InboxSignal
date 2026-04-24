@@ -23,6 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "extract_contact",
         "extract_budget",
         "extract_product_or_service",
+        "extract_date_or_time",
     ];
 
     function applyScenarioPreset(form, scenarioValue) {

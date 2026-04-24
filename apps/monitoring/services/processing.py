@@ -182,13 +182,15 @@ def apply_repeated_message_urgency(
 
     profile = message.profile
 
-    if not profile.urgent_repeated_messages:
-        return analysis
-
     if not profile.track_urgent:
         return analysis
 
-    if analysis.priority_score <= 0:
+    if not profile.urgent_repeated_messages:
+        return analysis
+
+    reason = analysis.rule_metadata.get("reason")
+
+    if reason in {"empty_message", "ignored_noise"}:
         return analysis
 
     if not has_recent_repeated_messages(message=message):
@@ -216,7 +218,7 @@ def apply_repeated_message_urgency(
         summary=analysis.summary,
         extracted_data=analysis.extracted_data,
         rule_metadata=rule_metadata,
-        should_create_event=analysis.should_create_event,
+        should_create_event=True,
     )
 
 

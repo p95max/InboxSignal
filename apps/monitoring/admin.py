@@ -91,6 +91,7 @@ class MonitoringProfileAdmin(admin.ModelAdmin):
                     "extract_contact",
                     "extract_budget",
                     "extract_product_or_service",
+                    "extract_date_or_time",
                 )
             },
         ),

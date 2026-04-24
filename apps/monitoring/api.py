@@ -9,7 +9,7 @@ from django.views.decorators.http import (
     require_POST,
     require_http_methods,
 )
-
+from apps.monitoring.services.scenario_presets import get_scenario_preset
 from apps.monitoring.models import Event, MonitoringProfile
 
 
@@ -33,6 +33,8 @@ PROFILE_MUTABLE_FIELDS = {
     "extract_contact",
     "extract_budget",
     "extract_product_or_service",
+    "extract_date_or_time",
+    "ai_daily_call_limit",
 }
 
 PROFILE_BOOLEAN_FIELDS = {
@@ -51,6 +53,7 @@ PROFILE_BOOLEAN_FIELDS = {
     "extract_contact",
     "extract_budget",
     "extract_product_or_service",
+    "extract_date_or_time",
 }
 
 
@@ -164,6 +167,11 @@ def create_profile_api(request: HttpRequest) -> JsonResponse:
     if errors:
         return validation_error_response(errors)
 
+    cleaned_data = apply_scenario_preset_to_cleaned_data(
+        cleaned_data=cleaned_data,
+        payload=payload,
+    )
+
     profile = MonitoringProfile(
         owner=request.user,
         **cleaned_data,
@@ -203,6 +211,11 @@ def update_profile_api(
 
     if errors:
         return validation_error_response(errors)
+
+    cleaned_data = apply_scenario_preset_to_cleaned_data(
+        cleaned_data=cleaned_data,
+        payload=payload,
+    )
 
     for field_name, value in cleaned_data.items():
         setattr(profile, field_name, value)
@@ -562,6 +575,8 @@ def serialize_profile(profile: MonitoringProfile) -> dict:
         "last_event_at": isoformat_or_none(profile.last_event_at),
         "created_at": isoformat_or_none(profile.created_at),
         "updated_at": isoformat_or_none(profile.updated_at),
+        "extract_date_or_time": profile.extract_date_or_time,
+        "ai_daily_call_limit": profile.ai_daily_call_limit,
     }
 
 
@@ -643,3 +658,27 @@ def parse_positive_int(
         return default
 
     return min(value, max_value)
+
+
+
+def apply_scenario_preset_to_cleaned_data(
+    *,
+    cleaned_data: dict,
+    payload: dict,
+) -> dict:
+    """Apply scenario preset while preserving explicitly provided payload fields."""
+
+    scenario = cleaned_data.get("scenario")
+
+    if not scenario or scenario == MonitoringProfile.Scenario.CUSTOM:
+        return cleaned_data
+
+    preset = get_scenario_preset(scenario)
+
+    for field_name, value in preset.items():
+        if field_name in payload:
+            continue
+
+        cleaned_data[field_name] = value
+
+    return cleaned_data

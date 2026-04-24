@@ -39,6 +39,7 @@ EXTRACTION_FIELDS = (
     "extract_contact",
     "extract_budget",
     "extract_product_or_service",
+    "extract_date_or_time",
 )
 
 PROFILE_CONSTRUCTOR_FIELDS = (
@@ -77,6 +78,7 @@ FIELD_LABELS = {
     "extract_contact": "Contact",
     "extract_budget": "Budget",
     "extract_product_or_service": "Product or service",
+    "extract_date_or_time": "Date / time",
 }
 
 
@@ -360,7 +362,14 @@ class MonitoringProfileUpdateForm(
         return value
 
     def save(self, commit=True):
-        profile = super().save(commit=commit)
+        profile = super().save(commit=False)
+
+        self.apply_scenario_preset_to_profile(profile)
+
+        if commit:
+            profile.full_clean()
+            profile.save()
+            self.save_m2m()
 
         alert_chat_id = self.cleaned_data.get("alert_chat_id", "").strip()
 
