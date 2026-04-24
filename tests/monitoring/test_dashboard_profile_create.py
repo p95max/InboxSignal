@@ -27,6 +27,7 @@ def test_onboarding_creates_profile_and_telegram_source(client, user, settings):
             "track_complaints": "on",
             "track_requests": "on",
             "track_urgent": "on",
+            "digest_enabled": "on",
         },
     )
 
@@ -41,6 +42,8 @@ def test_onboarding_creates_profile_and_telegram_source(client, user, settings):
     assert source.status == ConnectedSource.Status.ACTIVE
     assert source.external_id == "123456789"
     assert source.metadata["alert_chat_id"] == "123456789"
+    assert profile.digest_interval_hours == 3
+    assert profile.digest_enabled is True
     assert profile.digest_interval_hours == 3
 
     assert source.credentials_encrypted
@@ -101,6 +104,7 @@ def test_profile_update_changes_digest_interval(client, user, monitoring_profile
             "extract_product_or_service": "on",
             "extract_date_or_time": "on",
             "alert_chat_id": "",
+            "digest_enabled": "on",
         },
     )
 
