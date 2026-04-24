@@ -64,31 +64,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 document.addEventListener("DOMContentLoaded", function () {
-    function setupDigestToggle(form) {
-        const enabledInput = form.querySelector('[name="digest_enabled"]');
-        const frequencyInput = form.querySelector('[name="digest_interval_hours"]');
-        const frequencyBlock = form.querySelector('[data-digest-frequency]');
-
-        if (!enabledInput || !frequencyInput || !frequencyBlock) {
-            return;
-        }
-
-        function syncDigestState() {
-            const enabled = enabledInput.checked;
-
-            frequencyInput.disabled = !enabled;
-            frequencyBlock.classList.toggle("is-disabled", !enabled);
-        }
-
-        enabledInput.addEventListener("change", syncDigestState);
-        syncDigestState();
-    }
-
-    document.querySelectorAll(".profile-create-form").forEach(setupDigestToggle);
-});
-
-
-document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-digest-settings]").forEach(function (root) {
         const checkbox = root.querySelector(
             "[data-digest-enabled], input[name='digest_enabled']"

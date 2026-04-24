@@ -55,7 +55,7 @@ class MonitoringProfile(models.Model):
     )
 
     digest_enabled = models.BooleanField(
-        default=True,
+        default=False,
         help_text=_("Enable grouped digest notifications for this profile."),
     )
 

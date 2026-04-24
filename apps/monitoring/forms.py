@@ -140,13 +140,6 @@ class MonitoringProfileConstructorMixin:
             )
             digest_interval.widget.attrs.setdefault("data-digest-interval", "true")
 
-        digest_interval = self.fields.get("digest_interval_hours")
-        if digest_interval:
-            digest_interval.label = "Digest frequency"
-            digest_interval.help_text = (
-                "Used only when digest notifications are enabled. "
-                "Only new important/urgent events are included."
-            )
 
         alert_chat_id = self.fields.get("alert_chat_id")
         if alert_chat_id:

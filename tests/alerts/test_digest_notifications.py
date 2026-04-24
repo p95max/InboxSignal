@@ -30,11 +30,18 @@ def create_user(email="owner@example.com"):
     )
 
 
-def create_profile(user, *, name="Test profile", digest_interval_hours=1):
+def create_profile(
+    user,
+    *,
+    name="Test profile",
+    digest_interval_hours=1,
+    digest_enabled=True,
+):
     return MonitoringProfile.objects.create(
         owner=user,
         name=name,
         status=MonitoringProfile.Status.ACTIVE,
+        digest_enabled=digest_enabled,
         digest_interval_hours=digest_interval_hours,
     )
 
@@ -352,3 +359,42 @@ def test_due_digest_builder_respects_profile_interval(settings):
     }
 
     assert three_hour_source.metadata["alert_chat_id"] in recipients
+
+
+
+def test_digest_skips_profile_when_digest_disabled(settings):
+    settings.DIGEST_NOTIFICATIONS_ENABLED = True
+    settings.DIGEST_MAX_EVENTS_PER_NOTIFICATION = 20
+
+    user = create_user()
+    profile = create_profile(user, digest_enabled=False)
+    source = create_source(user, profile)
+
+    period_start = timezone.now().replace(
+        hour=10,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+    period_end = period_start + timedelta(hours=1)
+
+    create_event(
+        profile,
+        score=85,
+        created_at=period_start + timedelta(minutes=10),
+    )
+
+    result = create_digest_delivery_for_source(
+        source=source,
+        recipient="123456",
+        period=DigestPeriod(
+            start=period_start,
+            end=period_end,
+        ),
+    )
+
+    assert result.alert is None
+    assert result.created is False
+    assert AlertDelivery.objects.filter(
+        delivery_type=AlertDelivery.DeliveryType.DIGEST,
+    ).count() == 0
