@@ -46,6 +46,7 @@ PROFILE_CONSTRUCTOR_FIELDS = (
     "name",
     "scenario",
     "business_context",
+    "digest_interval_hours",
     *TRACK_FIELDS,
     *IGNORE_FIELDS,
     *URGENCY_FIELDS,
@@ -57,6 +58,7 @@ TEXT_LIKE_FIELDS = (
     "scenario",
     "status",
     "business_context",
+    "digest_interval_hours",
     "telegram_bot_token",
     "alert_chat_id",
     "ai_daily_call_limit",
@@ -124,6 +126,14 @@ class MonitoringProfileConstructorMixin:
         if scenario:
             scenario.help_text = (
                 "Choose a preset scenario or switch to Custom for manual control."
+            )
+
+        digest_interval = self.fields.get("digest_interval_hours")
+        if digest_interval:
+            digest_interval.label = "Digest frequency"
+            digest_interval.help_text = (
+                "How often this profile sends grouped digest notifications. "
+                "Only new important/urgent events are included."
             )
 
         alert_chat_id = self.fields.get("alert_chat_id")
@@ -298,6 +308,7 @@ class MonitoringProfileUpdateForm(
             "scenario",
             "status",
             "business_context",
+            "digest_interval_hours",
             *TRACK_FIELDS,
             *IGNORE_FIELDS,
             *URGENCY_FIELDS,

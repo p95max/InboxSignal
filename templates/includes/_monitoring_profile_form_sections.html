@@ -78,6 +78,21 @@
             {% endfor %}
         </div>
     {% endif %}
+
+    {% if form.digest_interval_hours %}
+        <div>
+            <label for="{{ form.digest_interval_hours.id_for_label }}">
+                {{ form.digest_interval_hours.label }}
+            </label>
+            {{ form.digest_interval_hours }}
+            {% if form.digest_interval_hours.help_text %}
+                <div class="helptext">{{ form.digest_interval_hours.help_text }}</div>
+            {% endif %}
+            {% for error in form.digest_interval_hours.errors %}
+                <div class="form-error">{{ error }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
 </div>
 
 <div class="form-section">

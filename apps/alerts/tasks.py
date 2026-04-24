@@ -12,10 +12,7 @@ from apps.alerts.services.telegram_delivery import (
 )
 from django.core.cache import cache
 
-from apps.alerts.services.digest import (
-    create_digest_deliveries_for_period,
-    get_previous_hour_digest_period,
-)
+from apps.alerts.services.digest import create_due_digest_deliveries
 
 
 logger = logging.getLogger(__name__)
@@ -139,13 +136,10 @@ DIGEST_BUILD_LOCK_TTL_SECONDS = 10 * 60
 
 @shared_task(bind=True)
 def build_and_enqueue_digest_notifications_task(self) -> int:
-    """Build hourly digest notifications and enqueue newly created deliveries."""
+    """Build due digest notifications and enqueue newly created deliveries."""
 
-    period = get_previous_hour_digest_period()
-    lock_key = build_digest_period_lock_key(
-        period_start=period.start,
-        period_end=period.end,
-    )
+    reference_time = timezone.localtime(timezone.now())
+    lock_key = build_digest_period_lock_key(reference_time=reference_time)
 
     if not cache.add(lock_key, "1", timeout=DIGEST_BUILD_LOCK_TTL_SECONDS):
         logger.info(
@@ -153,13 +147,12 @@ def build_and_enqueue_digest_notifications_task(self) -> int:
             extra={
                 "task_id": self.request.id,
                 "lock_key": lock_key,
-                "period_start": period.start.isoformat(),
-                "period_end": period.end.isoformat(),
+                "reference_time": reference_time.isoformat(),
             },
         )
         return 0
 
-    results = create_digest_deliveries_for_period(period=period)
+    results = create_due_digest_deliveries(reference_time=reference_time)
 
     enqueued_count = 0
 
@@ -174,8 +167,7 @@ def build_and_enqueue_digest_notifications_task(self) -> int:
         "digest_build_finished",
         extra={
             "task_id": self.request.id,
-            "period_start": period.start.isoformat(),
-            "period_end": period.end.isoformat(),
+            "reference_time": reference_time.isoformat(),
             "created_count": sum(1 for item in results if item.created),
             "enqueued_count": enqueued_count,
         },
@@ -186,15 +178,19 @@ def build_and_enqueue_digest_notifications_task(self) -> int:
 
 def build_digest_period_lock_key(
     *,
-    period_start,
-    period_end,
+    reference_time,
 ) -> str:
-    """Build Redis lock key for one digest period build run."""
+    """Build Redis lock key for one scheduled digest builder run."""
+
+    completed_hour = timezone.localtime(reference_time).replace(
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
 
     return ":".join(
         [
             "digest-build-lock",
-            period_start.isoformat(),
-            period_end.isoformat(),
+            completed_hour.isoformat(),
         ]
     )

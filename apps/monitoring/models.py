@@ -24,6 +24,13 @@ class MonitoringProfile(models.Model):
         ACTIVE = "active", _("Active")
         DISABLED = "disabled", _("Disabled")
 
+    class DigestInterval(models.IntegerChoices):
+        EVERY_HOUR = 1, _("Every hour")
+        EVERY_3_HOURS = 3, _("Every 3 hours")
+        EVERY_6_HOURS = 6, _("Every 6 hours")
+        EVERY_12_HOURS = 12, _("Every 12 hours")
+        EVERY_24_HOURS = 24, _("Every 24 hours")
+
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -45,6 +52,16 @@ class MonitoringProfile(models.Model):
         blank=True,
         validators=[MaxLengthValidator(300)],
         help_text=_("Optional plain text business context, max 300 characters."),
+    )
+
+    digest_interval_hours = models.PositiveSmallIntegerField(
+        choices=DigestInterval.choices,
+        default=DigestInterval.EVERY_HOUR,
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(24),
+        ],
+        help_text=_("How often digest notifications should be sent."),
     )
 
     ai_daily_call_limit = models.PositiveIntegerField(
@@ -84,6 +101,7 @@ class MonitoringProfile(models.Model):
         indexes = [
             models.Index(fields=["owner", "status"]),
             models.Index(fields=["scenario"]),
+            models.Index(fields=["digest_interval_hours"]),
             models.Index(fields=["last_event_at"]),
         ]
 

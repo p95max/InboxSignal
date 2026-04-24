@@ -262,12 +262,18 @@ def build_telegram_digest_text(alert: AlertDelivery) -> str:
 
     period_start = payload.get("period_start", "")
     period_end = payload.get("period_end", "")
+    interval_hours = payload.get("digest_interval_hours")
 
     parts = [
         "🧾 Monitoring digest",
         "",
         f"🗂 Profile: {alert.profile.name}",
         f"🕒 Period: {period_start} — {period_end}",
+        (
+            f"⏱ Digest interval: {interval_hours}h"
+            if interval_hours
+            else "⏱ Digest interval: default"
+        ),
         f"📌 New events: {total}",
         f"🔴 Urgent: {urgent}",
         f"🟡 Important: {important}",

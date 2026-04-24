@@ -19,6 +19,7 @@ PROFILE_MUTABLE_FIELDS = {
     "scenario",
     "status",
     "business_context",
+    "digest_interval_hours",
     "track_leads",
     "track_complaints",
     "track_requests",
@@ -372,6 +373,23 @@ def validate_profile_payload(
             cleaned_data[field_name] = value
             continue
 
+        if field_name == "digest_interval_hours":
+            valid_intervals = {
+                choice.value
+                for choice in MonitoringProfile.DigestInterval
+            }
+
+            if isinstance(value, bool) or not isinstance(value, int):
+                errors[field_name] = "Expected integer value."
+                continue
+
+            if value not in valid_intervals:
+                errors[field_name] = "Unsupported digest interval."
+                continue
+
+            cleaned_data[field_name] = value
+            continue
+
         if field_name == "ai_daily_call_limit":
             if value is None or value == "":
                 cleaned_data[field_name] = None
@@ -582,6 +600,8 @@ def serialize_profile(profile: MonitoringProfile) -> dict:
         "scenario": profile.scenario,
         "status": profile.status,
         "business_context": profile.business_context,
+        "digest_interval_hours": profile.digest_interval_hours,
+        "digest_interval_label": profile.get_digest_interval_hours_display(),
         "track_leads": profile.track_leads,
         "track_complaints": profile.track_complaints,
         "track_requests": profile.track_requests,

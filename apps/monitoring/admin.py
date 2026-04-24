@@ -15,6 +15,7 @@ class MonitoringProfileAdmin(admin.ModelAdmin):
         "owner",
         "scenario",
         "status",
+        "digest_interval_hours",
         "ai_daily_call_limit",
         "last_event_at",
         "created_at",
@@ -26,6 +27,7 @@ class MonitoringProfileAdmin(admin.ModelAdmin):
         "track_complaints",
         "track_requests",
         "track_urgent",
+        "digest_interval_hours",
     )
     search_fields = (
         "name",
@@ -92,6 +94,14 @@ class MonitoringProfileAdmin(admin.ModelAdmin):
                     "extract_budget",
                     "extract_product_or_service",
                     "extract_date_or_time",
+                )
+            },
+        ),
+        (
+            "Notification settings",
+            {
+                "fields": (
+                    "digest_interval_hours",
                 )
             },
         ),

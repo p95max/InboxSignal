@@ -9,7 +9,10 @@ from apps.alerts.services.digest import (
     DigestPeriod,
     create_digest_delivery_for_source,
     create_digest_deliveries_for_period,
+    create_due_digest_deliveries,
+    get_completed_digest_period,
     get_previous_hour_digest_period,
+    is_digest_interval_due,
 )
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.models import Event, MonitoringProfile
@@ -27,11 +30,12 @@ def create_user(email="owner@example.com"):
     )
 
 
-def create_profile(user):
+def create_profile(user, *, name="Test profile", digest_interval_hours=1):
     return MonitoringProfile.objects.create(
         owner=user,
-        name="Test profile",
+        name=name,
         status=MonitoringProfile.Status.ACTIVE,
+        digest_interval_hours=digest_interval_hours,
     )
 
 
@@ -241,3 +245,110 @@ def test_digest_builder_creates_nothing_without_matching_events(settings):
     assert AlertDelivery.objects.filter(
         delivery_type=AlertDelivery.DeliveryType.DIGEST,
     ).count() == 0
+    
+    
+def test_completed_digest_period_uses_selected_interval():
+    reference_time = timezone.datetime(
+        2026,
+        4,
+        24,
+        12,
+        5,
+        30,
+        tzinfo=timezone.get_current_timezone(),
+    )
+
+    period = get_completed_digest_period(
+        interval_hours=3,
+        reference_time=reference_time,
+    )
+
+    assert period.start.hour == 9
+    assert period.start.minute == 0
+    assert period.end.hour == 12
+    assert period.end.minute == 0
+
+
+@pytest.mark.parametrize(
+    ("hour", "interval_hours", "expected"),
+    [
+        (11, 1, True),
+        (11, 3, False),
+        (12, 3, True),
+        (12, 6, True),
+        (18, 12, False),
+        (0, 24, True),
+    ],
+)
+def test_digest_interval_due_detection(hour, interval_hours, expected):
+    reference_time = timezone.datetime(
+        2026,
+        4,
+        24,
+        hour,
+        5,
+        0,
+        tzinfo=timezone.get_current_timezone(),
+    )
+
+    assert (
+        is_digest_interval_due(
+            reference_time=reference_time,
+            interval_hours=interval_hours,
+        )
+        is expected
+    )
+
+
+def test_due_digest_builder_respects_profile_interval(settings):
+    settings.DIGEST_NOTIFICATIONS_ENABLED = True
+    settings.DIGEST_MAX_EVENTS_PER_NOTIFICATION = 20
+
+    user = create_user()
+    hourly_profile = create_profile(
+        user,
+        name="Hourly profile",
+        digest_interval_hours=1,
+    )
+    three_hour_profile = create_profile(
+        user,
+        name="Three hour profile",
+        digest_interval_hours=3,
+    )
+
+    create_source(user, hourly_profile, alert_chat_id="111")
+    three_hour_source = create_source(user, three_hour_profile, alert_chat_id="333")
+
+    reference_time = timezone.datetime(
+        2026,
+        4,
+        24,
+        11,
+        5,
+        0,
+        tzinfo=timezone.get_current_timezone(),
+    )
+
+    period_end = reference_time.replace(minute=0, second=0, microsecond=0)
+    event_time = period_end - timedelta(minutes=30)
+
+    create_event(hourly_profile, score=80, created_at=event_time)
+    create_event(three_hour_profile, score=80, created_at=event_time)
+
+    results = create_due_digest_deliveries(reference_time=reference_time)
+
+    assert len(results) == 1
+    assert results[0].alert.profile_id == hourly_profile.id
+    assert results[0].alert.recipient == "111"
+    assert results[0].alert.payload["digest_interval_hours"] == 1
+
+    due_reference_time = reference_time.replace(hour=12)
+    results = create_due_digest_deliveries(reference_time=due_reference_time)
+
+    recipients = {
+        result.alert.recipient
+        for result in results
+        if result.alert is not None
+    }
+
+    assert three_hour_source.metadata["alert_chat_id"] in recipients

@@ -323,3 +323,59 @@ def test_profile_api_applies_scenario_preset_on_patch(
     assert monitoring_profile.track_urgent is True
     assert monitoring_profile.urgent_deadlines is True
     assert monitoring_profile.extract_date_or_time is True
+
+
+@pytest.mark.django_db
+def test_profile_api_updates_digest_interval(
+    client,
+    user,
+    monitoring_profile,
+):
+    client.force_login(user)
+
+    response = client.patch(
+        reverse(
+            "monitoring:profile_detail_api",
+            kwargs={"profile_id": monitoring_profile.id},
+        ),
+        data=json.dumps(
+            {
+                "digest_interval_hours": 6,
+            }
+        ),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+
+    monitoring_profile.refresh_from_db()
+
+    assert monitoring_profile.digest_interval_hours == 6
+    assert response.json()["profile"]["digest_interval_hours"] == 6
+
+
+@pytest.mark.django_db
+def test_profile_api_rejects_unsupported_digest_interval(
+    client,
+    user,
+    monitoring_profile,
+):
+    client.force_login(user)
+
+    response = client.patch(
+        reverse(
+            "monitoring:profile_detail_api",
+            kwargs={"profile_id": monitoring_profile.id},
+        ),
+        data=json.dumps(
+            {
+                "digest_interval_hours": 2,
+            }
+        ),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["details"]["digest_interval_hours"] == (
+        "Unsupported digest interval."
+    )

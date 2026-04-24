@@ -31,26 +31,90 @@ class DigestBuildResult:
 
 
 def get_previous_hour_digest_period(reference_time=None) -> DigestPeriod:
-    """Return the previous completed hourly digest period.
+    """Return the previous completed hourly digest period."""
 
-    Example:
-    - reference_time = 11:05
-    - period = [10:00, 11:00)
-    """
+    return get_completed_digest_period(
+        interval_hours=MonitoringProfile.DigestInterval.EVERY_HOUR,
+        reference_time=reference_time,
+    )
+
+
+def get_completed_digest_period(
+    *,
+    interval_hours: int,
+    reference_time=None,
+) -> DigestPeriod:
+    """Return the latest completed digest period for the given interval."""
 
     now = timezone.localtime(reference_time or timezone.now())
+    interval_hours = normalize_digest_interval_hours(interval_hours)
 
     period_end = now.replace(
         minute=0,
         second=0,
         microsecond=0,
     )
-    period_start = period_end - timedelta(hours=1)
+    period_start = period_end - timedelta(hours=interval_hours)
 
     return DigestPeriod(
         start=period_start,
         end=period_end,
     )
+
+
+def create_due_digest_deliveries(
+    *,
+    reference_time=None,
+) -> list[DigestBuildResult]:
+    """Create digest deliveries only for profiles whose interval is due now."""
+
+    if not settings.DIGEST_NOTIFICATIONS_ENABLED:
+        logger.info("digest_notifications_disabled")
+        return []
+
+    reference_time = timezone.localtime(reference_time or timezone.now())
+    results = []
+
+    for source in iter_digest_sources():
+        interval_hours = normalize_digest_interval_hours(
+            source.profile.digest_interval_hours
+        )
+
+        if not is_digest_interval_due(
+            reference_time=reference_time,
+            interval_hours=interval_hours,
+        ):
+            continue
+
+        recipient = get_digest_recipient(source)
+
+        if not recipient:
+            continue
+
+        period = get_completed_digest_period(
+            interval_hours=interval_hours,
+            reference_time=reference_time,
+        )
+
+        result = create_digest_delivery_for_source(
+            source=source,
+            recipient=recipient,
+            period=period,
+        )
+
+        if result.alert is not None:
+            results.append(result)
+
+    logger.info(
+        "due_digest_deliveries_built",
+        extra={
+            "reference_time": reference_time.isoformat(),
+            "deliveries_total": len(results),
+            "deliveries_created": sum(1 for item in results if item.created),
+        },
+    )
+
+    return results
 
 
 def create_digest_deliveries_for_period(
@@ -65,18 +129,7 @@ def create_digest_deliveries_for_period(
 
     results = []
 
-    sources = (
-        ConnectedSource.objects.select_related("profile", "owner")
-        .filter(
-            source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
-            status=ConnectedSource.Status.ACTIVE,
-            is_deleted=False,
-            profile__status=MonitoringProfile.Status.ACTIVE,
-        )
-        .order_by("profile_id", "id")
-    )
-
-    for source in sources:
+    for source in iter_digest_sources():
         recipient = get_digest_recipient(source)
 
         if not recipient:
@@ -102,6 +155,57 @@ def create_digest_deliveries_for_period(
     )
 
     return results
+
+
+def iter_digest_sources():
+    """Return active Telegram bot sources eligible for digest delivery."""
+
+    return (
+        ConnectedSource.objects.select_related("profile", "owner")
+        .filter(
+            source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+            status=ConnectedSource.Status.ACTIVE,
+            is_deleted=False,
+            profile__status=MonitoringProfile.Status.ACTIVE,
+        )
+        .order_by("profile_id", "id")
+    )
+
+
+def is_digest_interval_due(
+    *,
+    reference_time,
+    interval_hours: int,
+) -> bool:
+    """Return True when a digest with this interval should be built now."""
+
+    interval_hours = normalize_digest_interval_hours(interval_hours)
+    period_end = timezone.localtime(reference_time).replace(
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+
+    return period_end.hour % interval_hours == 0
+
+
+def normalize_digest_interval_hours(value) -> int:
+    """Return a safe digest interval value."""
+
+    try:
+        interval_hours = int(value)
+    except (TypeError, ValueError):
+        return int(MonitoringProfile.DigestInterval.EVERY_HOUR)
+
+    valid_intervals = {
+        choice.value
+        for choice in MonitoringProfile.DigestInterval
+    }
+
+    if interval_hours not in valid_intervals:
+        return int(MonitoringProfile.DigestInterval.EVERY_HOUR)
+
+    return interval_hours
 
 
 def create_digest_delivery_for_source(
@@ -248,6 +352,7 @@ def build_digest_payload(
         "recipient": recipient,
         "period_start": period.start.isoformat(),
         "period_end": period.end.isoformat(),
+        "digest_interval_hours": source.profile.digest_interval_hours,
         "counts": {
             "total": len(events),
             "urgent": urgent_count,
