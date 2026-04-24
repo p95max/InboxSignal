@@ -2,56 +2,72 @@
 
 > Technical documentation: [`docs/technical-readme.md`](docs/technical-readme.md)
 
-AI-powered Django service for monitoring Telegram communication streams, converting raw messages into structured events, prioritizing what matters, and delivering internal alerts.
+AI-powered Django service for monitoring Telegram communication streams, converting raw messages into structured events, prioritizing what matters, and delivering internal alerts and digests.
 
 ## What the project does
 
-The system is built for one core job: reduce message noise and surface only the signals that need attention.
+InboxSignal is built for one operational job: reduce message noise and surface only the signals that need attention.
 
 Current MVP flow:
 
-- receives Telegram messages
-- stores raw incoming messages in PostgreSQL
-- applies rules-based triage
-- uses AI selectively for ambiguous messages
-- creates structured events with priority
-- sends internal alerts to Telegram
+```text
+Telegram -> Ingestion -> Rules -> Optional AI -> Event -> AlertDelivery -> Telegram alert/digest
+```
 
-This is **not** a chat client and **not** a CRM. It is a message triage and alerting backend with a simple web UI for monitoring profiles and event review.
+The system is **not** a chat client and **not** a CRM. It is a message triage backend with a web UI for onboarding, profile configuration, event review, alert setup, digest configuration, and minimal operational visibility.
 
 ## Main features
 
-- Django-based web application with dashboard and profile management
+- Django-based web application with dashboard and monitoring profile management
+- separate onboarding flow after signup
+- scenario presets for common product flows:
+  - lead detection
+  - complaint / negative feedback
+  - booking / request
+  - urgent messages
+  - general monitoring
+  - custom configuration
+- full create/edit monitoring profile constructor
+- configurable profile behavior:
+  - `track_*` signals: leads, complaints, requests, urgent, general activity
+  - `ignore_*` noise filters: greetings, short replies, emoji-only messages
+  - `urgent_*` rules: negative messages, deadlines, repeated follow-ups
+  - `extract_*` fields: name, contact, budget, product/service, date/time
 - Telegram Bot integration
-- webhook-based ingestion with additional `X-Telegram-Bot-Api-Secret-Token` validation
+- webhook-based ingestion with `X-Telegram-Bot-Api-Secret-Token` validation
 - polling mode for local development
-- background processing with Celery + Redis
-- rules-first analysis with `optional AI enrichment`
+- protected Telegram bot system commands:
+  - `/start`
+  - `/start_alerts <setup-token>`
+  - `/digest`
+- rules-first message analysis with optional AI enrichment
 - event creation with priority scoring
-- Telegram alert delivery
+- instant Telegram alert delivery
+- digest notifications for new important/urgent events
+- per-profile digest frequency: every 1, 3, 6, 12, or 24 hours
+- Celery worker for async processing and alert delivery
+- Celery Beat service for scheduled digest building
+- idempotent alert and digest delivery creation
 - customer auto-replies and anti-spam limits
-- admin panel for users, profiles, connected sources, AI results, events, and alerts
+- AI usage limits per account and optional stricter per-profile limit
+- minimal internal ops visibility for failed alerts, AI fallbacks, webhook rejects, and pending retries
+- Django admin coverage for core models
 - Pytest-based test suite
 
 ## Tech stack
 
 - Python 3.12
-- Django 6
+- Django 6.x
 - PostgreSQL 16
 - Redis 7
 - Celery
+- Celery Beat
 - django-allauth
 - OpenAI API
 - Telegram Bot API
 - Docker Compose v2
 
-## Architecture at a glance
-
-```text
-Telegram -> Ingestion -> Rules -> Optional AI -> Event -> AlertDelivery -> Telegram alert chat
-```
-
-Core domain objects:
+## Core domain objects
 
 ```text
 User
@@ -60,6 +76,13 @@ User
       -> IncomingMessage
         -> Event
           -> AlertDelivery
+        -> AIAnalysisResult
+```
+
+Important delivery types:
+
+```text
+AlertDelivery.delivery_type = instant | digest
 ```
 
 ## Local development
@@ -87,9 +110,10 @@ docker compose up --build
 Services:
 
 - `web` — Django development server
-- `celery_worker` — background jobs
+- `celery_worker` — background processing and alert delivery
+- `celery_beat` — scheduled digest builder
 - `db` — PostgreSQL
-- `redis` — broker, cache, rate limits, temporary state
+- `redis` — broker, result backend, cache, rate limits, cooldowns, temporary state
 
 Application URL:
 
@@ -123,17 +147,25 @@ Run all tests:
 docker compose run --rm -e RUN_MIGRATIONS=0 web pytest
 ```
 
-Run one module:
+Run focused modules:
 
 ```bash
 docker compose run --rm -e RUN_MIGRATIONS=0 web pytest tests/integrations/test_telegram_webhook.py -q
 ```
 
+```bash
+docker compose run --rm -e RUN_MIGRATIONS=0 web pytest tests/alerts -q
+```
+
+```bash
+docker compose run --rm -e RUN_MIGRATIONS=0 web pytest tests/monitoring/test_ops_visibility.py -q
+```
+
 ## Telegram integration
 
-### Polling mode (RECOMMENDED)
+### Polling mode for local development
 
-Use polling for local development when no public HTTPS URL is available.
+Use polling when no public HTTPS URL is available.
 
 Disable webhook first:
 
@@ -158,11 +190,7 @@ docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_poll \
   --once
 ```
 
----
-
-### Webhook mode
-
-Use webhook mode when you have a public HTTPS URL.
+### Webhook mode for public HTTPS environments
 
 Set webhook:
 
@@ -188,6 +216,66 @@ docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhoo
   --drop-pending-updates
 ```
 
+## Telegram bot commands
+
+### `/start`
+
+Returns a basic bot status message and lists available service commands.
+
+### `/start_alerts <setup-token>`
+
+Binds the current Telegram chat as the internal alert destination.
+
+The setup token is generated when a Telegram source has no configured `alert_chat_id`. This avoids manually copying chat IDs and prevents random Telegram users from binding themselves as the alert recipient.
+
+### `/digest`
+
+Requests a manual digest from the configured alert chat.
+
+Rules:
+
+- works only after alerts are configured
+- works only from the configured alert chat
+- includes new important/urgent events for the current profile digest interval
+- reuses existing digest delivery for the same period instead of creating duplicates
+
+## Digest notifications
+
+Digest notifications are profile-level grouped summaries for `NEW` events with priority `important` or `urgent`.
+
+Supported intervals:
+
+- every hour
+- every 3 hours
+- every 6 hours
+- every 12 hours
+- every 24 hours
+
+Scheduled digest building is handled by Celery Beat:
+
+```text
+celery_beat -> build_and_enqueue_digest_notifications_task -> AlertDelivery(delivery_type=digest)
+```
+
+Relevant settings:
+
+```env
+DIGEST_NOTIFICATIONS_ENABLED=True
+DIGEST_BEAT_MINUTE=5
+DIGEST_BEAT_HOUR=*
+DIGEST_MAX_EVENTS_PER_NOTIFICATION=20
+```
+
+## AI usage limits
+
+The active AI quota model is:
+
+- `AI_DAILY_CALL_LIMIT_PER_USER` — account-level daily AI call limit
+- `AI_DAILY_COST_LIMIT_USD_PER_USER` — account-level daily estimated cost limit
+- `MonitoringProfile.ai_daily_call_limit` — optional stricter per-profile limit
+
+There is no separate global `AI_DAILY_CALL_LIMIT_PER_PROFILE` environment setting in the current configuration model. Leave the profile field empty to use only the account-level quota.
+
 ## Security notes
 
 Current important protections include:
@@ -197,8 +285,32 @@ Current important protections include:
 - dedicated Telegram secret token header validation
 - webhook rate limits on source and profile level
 - customer anti-spam limits
+- protected alert chat binding via `/start_alerts <setup-token>`
+- manual digest restricted to the configured alert chat
 - alert cooldown support
+- idempotent alert and digest creation
 - write-only admin fields for sensitive Telegram secrets
+
+## Ops visibility
+
+The project includes a minimal staff-only internal visibility screen for operational troubleshooting.
+
+It tracks:
+
+- failed alert deliveries today and total
+- pending retries
+- AI fallbacks and failures
+- webhook rejects, including `403` and `429`
+- pending/failed incoming message processing
+
+Routes:
+
+```text
+/ops/visibility/
+/ops/visibility/summary.json
+```
+
+This is not a full metrics stack. It is a pragmatic internal support screen for the MVP.
 
 ## Admin coverage
 
@@ -213,28 +325,6 @@ Django admin is configured for:
 - AI analysis results
 - Alert deliveries
 
-## Project status
-
-This repository is currently focused on the Telegram MVP.
-
-Implemented end-to-end:
-
-- profile creation from dashboard
-- Telegram source connection
-- Telegram ingestion
-- AI-assisted analysis
-- event creation
-- Telegram alert delivery
-- review / ignore / escalate / archive workflow
-
-Planned or natural next steps:
-
-- WhatsApp or additional channel adapters
-- digest notifications
-- richer analytics
-- stronger production deployment profile
-- operational dashboards and monitoring
-
 ## Useful commands
 
 Open Django shell:
@@ -243,10 +333,16 @@ Open Django shell:
 docker compose exec web python manage.py shell
 ```
 
-Show Celery logs:
+Show Celery worker logs:
 
 ```bash
 docker compose logs -f celery_worker
+```
+
+Show Celery Beat logs:
+
+```bash
+docker compose logs -f celery_beat
 ```
 
 Run Django checks:
@@ -254,6 +350,33 @@ Run Django checks:
 ```bash
 docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py check
 ```
+
+## Project status
+
+Implemented end-to-end:
+
+- onboarding after signup
+- monitoring profile create/edit flow
+- scenario presets and custom constructor
+- Telegram source connection
+- Telegram webhook and polling ingestion
+- Telegram bot system commands with token-protected alert setup
+- rules-first analysis and optional AI enrichment
+- event creation
+- instant Telegram alert delivery
+- digest notifications via Celery Beat
+- manual Telegram digest command
+- event review / ignore / escalate / archive workflow
+- minimal ops visibility
+
+Natural next steps:
+
+- production deployment profile
+- structured log shipping / external metrics
+- richer analytics dashboard
+- replay/reprocess tooling
+- more delivery channels such as email or webhook
+- WhatsApp or additional channel adapters
 
 ## Contacts
 
