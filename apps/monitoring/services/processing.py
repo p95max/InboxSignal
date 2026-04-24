@@ -79,18 +79,15 @@ def process_incoming_message(message_id: str) -> Event | None:
             profile=message.profile,
         )
 
-        analysis = apply_repeated_message_urgency(
-            message=message,
-            analysis=analysis,
-        )
-
         detection_source = Event.DetectionSource.RULES
         ai_result = None
 
-        if should_use_ai(
+        should_run_ai = should_use_ai(
             message=message,
             rules_analysis=analysis,
-        ):
+        )
+
+        if should_run_ai:
             ai_result = analyze_message_with_ai(message)
 
             if ai_result.status == AIAnalysisResult.Status.SUCCEEDED:
@@ -124,6 +121,11 @@ def process_incoming_message(message_id: str) -> Event | None:
                         "ai_status": ai_result.status,
                     },
                 )
+
+        analysis = apply_repeated_message_urgency(
+            message=message,
+            analysis=analysis,
+        )
 
         return finalize_message_processing(
             message_id=message_id,
