@@ -222,13 +222,6 @@ def analyze_message_by_rules(
             if rule_name not in matched_rules:
                 matched_rules.append(rule_name)
 
-    score = apply_profile_urgency_rules(
-        text=normalized_text,
-        category=category,
-        score=score,
-        profile=profile,
-        matched_rules=matched_rules,
-    )
 
     extracted_data = filter_extracted_data_by_profile(
         profile=profile,
@@ -433,7 +426,7 @@ def collect_urgency_matches(
     if profile.urgent_deadlines and contains_any(text, DEADLINE_KEYWORDS):
         matched_rules.append("profile_urgent_deadlines")
 
-    return matched_rules
+    return list(dict.fromkeys(matched_rules))
 
 
 def filter_extracted_data_by_profile(

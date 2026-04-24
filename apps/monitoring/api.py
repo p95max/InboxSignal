@@ -2,6 +2,7 @@ import json
 from functools import wraps
 from typing import Callable
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.http import (
@@ -371,6 +372,30 @@ def validate_profile_payload(
             cleaned_data[field_name] = value
             continue
 
+        if field_name == "ai_daily_call_limit":
+            if value is None or value == "":
+                cleaned_data[field_name] = None
+                continue
+
+            if not isinstance(value, int):
+                errors[field_name] = "Expected integer value or null."
+                continue
+
+            if value < 1:
+                errors[field_name] = "Must be greater than or equal to 1."
+                continue
+
+            account_ai_limit = settings.AI_DAILY_CALL_LIMIT_PER_USER
+
+            if value > account_ai_limit:
+                errors[field_name] = (
+                    "Profile AI limit cannot be higher than the account daily AI quota."
+                )
+                continue
+
+            cleaned_data[field_name] = value
+            continue
+
     return cleaned_data, errors
 
 
@@ -572,11 +597,11 @@ def serialize_profile(profile: MonitoringProfile) -> dict:
         "extract_contact": profile.extract_contact,
         "extract_budget": profile.extract_budget,
         "extract_product_or_service": profile.extract_product_or_service,
+        "extract_date_or_time": profile.extract_date_or_time,
+        "ai_daily_call_limit": profile.ai_daily_call_limit,
         "last_event_at": isoformat_or_none(profile.last_event_at),
         "created_at": isoformat_or_none(profile.created_at),
         "updated_at": isoformat_or_none(profile.updated_at),
-        "extract_date_or_time": profile.extract_date_or_time,
-        "ai_daily_call_limit": profile.ai_daily_call_limit,
     }
 
 
