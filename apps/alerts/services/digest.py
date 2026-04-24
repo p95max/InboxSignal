@@ -46,7 +46,10 @@ def get_completed_digest_period(
 ) -> DigestPeriod:
     """Return the latest completed digest period for the given interval."""
 
-    now = timezone.localtime(reference_time or timezone.now())
+    now = timezone.localtime(reference_time or timezone.now()).replace(
+        second=0,
+        microsecond=0,
+    )
     interval_hours = normalize_digest_interval_hours(interval_hours)
 
     period_end = now.replace(
@@ -421,3 +424,19 @@ def serialize_digest_event(event: Event) -> dict:
         "contact_label": contact_label,
         "message_preview": message_preview,
     }
+
+
+def get_manual_digest_period(
+    *,
+    interval_hours: int,
+    reference_time=None,
+) -> DigestPeriod:
+    """Return manual digest period ending at current time."""
+
+    now = timezone.localtime(reference_time or timezone.now())
+    interval_hours = normalize_digest_interval_hours(interval_hours)
+
+    return DigestPeriod(
+        start=now - timedelta(hours=interval_hours),
+        end=now,
+    )

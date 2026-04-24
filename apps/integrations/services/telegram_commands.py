@@ -1,5 +1,16 @@
-ALERTS_START_COMMAND = "/start_alerts"
 START_COMMAND = "/start"
+ALERTS_START_COMMAND = "/start_alerts"
+DIGEST_COMMAND = "/digest"
+
+def is_system_command(text: str) -> bool:
+    """Return True for commands that should bypass customer flow."""
+
+    return (
+        is_start_command(text)
+        or is_alerts_start_command(text)
+        or is_digest_command(text)
+    )
+
 
 
 def normalize_telegram_command(text: str) -> str:
@@ -25,7 +36,7 @@ def is_alerts_start_command(text: str) -> bool:
     return normalize_telegram_command(text) == ALERTS_START_COMMAND
 
 
-def is_system_command(text: str) -> bool:
-    """Return True for commands that should bypass customer flow."""
+def is_digest_command(text: str) -> bool:
+    """Return True only for Telegram /digest command."""
 
-    return is_start_command(text) or is_alerts_start_command(text)
+    return normalize_telegram_command(text) == DIGEST_COMMAND

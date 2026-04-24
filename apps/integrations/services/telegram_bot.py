@@ -3,21 +3,30 @@ from dataclasses import dataclass
 from datetime import datetime, timezone as dt_timezone
 from typing import Any
 
+from apps.alerts.services.digest import (
+    create_digest_delivery_for_source,
+    get_manual_digest_period,
+)
+from apps.alerts.services.telegram_delivery import telegram_send_message
+from apps.alerts.tasks import send_alert_delivery_task
+from apps.integrations.models import ConnectedSource
+from apps.integrations.services.customer_auto_replies import (
+    maybe_send_telegram_customer_auto_reply,
+)
 from apps.integrations.services.customer_rate_limits import (
     check_telegram_customer_message_limits,
     send_telegram_customer_rate_limit_notice,
 )
-from apps.integrations.services.customer_auto_replies import (
-    maybe_send_telegram_customer_auto_reply,
-)
-from apps.alerts.services.telegram_delivery import telegram_send_message
-from apps.integrations.models import ConnectedSource
-from apps.monitoring.models import IncomingMessage
-from apps.monitoring.services.ingestion import IngestIncomingMessageResult, ingest_incoming_message
 from apps.integrations.services.telegram_commands import (
     is_alerts_start_command,
+    is_digest_command,
     is_start_command,
     is_system_command,
+)
+from apps.monitoring.models import IncomingMessage
+from apps.monitoring.services.ingestion import (
+    IngestIncomingMessageResult,
+    ingest_incoming_message,
 )
 
 
@@ -170,11 +179,121 @@ def handle_telegram_system_command(
         )
         return
 
+    if is_digest_command(parsed_message.text):
+        handle_manual_digest_command(
+            source=source,
+            parsed_message=parsed_message,
+        )
+        return
+
     if is_start_command(parsed_message.text):
         send_telegram_start_message(
             source=source,
             chat_id=parsed_message.external_chat_id,
         )
+        return
+
+
+def handle_manual_digest_command(
+    *,
+    source: ConnectedSource,
+    parsed_message: TelegramParsedMessage,
+) -> None:
+    """Build and send digest manually from the configured alert chat."""
+
+    metadata = source.metadata or {}
+    alert_chat_id = str(metadata.get("alert_chat_id", "")).strip()
+    request_chat_id = str(parsed_message.external_chat_id).strip()
+
+    logger.info(
+        "manual_digest_command_received",
+        extra={
+            "source_id": source.id,
+            "profile_id": source.profile_id,
+            "chat_id": request_chat_id,
+            "alert_chat_id_configured": bool(alert_chat_id),
+        },
+    )
+
+    if not alert_chat_id:
+        send_telegram_bot_message(
+            source=source,
+            chat_id=request_chat_id,
+            text=(
+                "⚠️ Alerts are not configured yet.\n\n"
+                "Send /start_alerts from the destination chat first."
+            ),
+        )
+        return
+
+    if request_chat_id != alert_chat_id:
+        logger.warning(
+            "manual_digest_command_rejected_wrong_chat",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+                "request_chat_id": request_chat_id,
+                "alert_chat_id": alert_chat_id,
+            },
+        )
+
+        send_telegram_bot_message(
+            source=source,
+            chat_id=request_chat_id,
+            text="⛔ Manual digest is available only from the configured alert chat.",
+        )
+        return
+
+    if not source.profile.digest_enabled:
+        send_telegram_bot_message(
+            source=source,
+            chat_id=request_chat_id,
+            text="⚠️ Digest notifications are disabled for this profile.",
+        )
+        return
+
+    period = get_manual_digest_period(
+        interval_hours=source.profile.digest_interval_hours,
+    )
+
+    result = create_digest_delivery_for_source(
+        source=source,
+        recipient=alert_chat_id,
+        period=period,
+    )
+
+    logger.info(
+        "manual_digest_command_result",
+        extra={
+            "source_id": source.id,
+            "profile_id": source.profile_id,
+            "alert_id": str(result.alert.id) if result.alert else None,
+            "delivery_created": result.created,
+            "period_start": period.start.isoformat(),
+            "period_end": period.end.isoformat(),
+        },
+    )
+
+    if result.alert is None:
+        send_telegram_bot_message(
+            source=source,
+            chat_id=request_chat_id,
+            text="✅ No new important or urgent events for the selected digest period.",
+        )
+        return
+
+    if result.created:
+        send_alert_delivery_task.delay(str(result.alert.id))
+        return
+
+    send_telegram_bot_message(
+        source=source,
+        chat_id=request_chat_id,
+        text=(
+            "ℹ️ Digest for this period already exists.\n\n"
+            "Open dashboard to review existing events."
+        ),
+    )
 
 
 def bind_telegram_alert_chat(
@@ -238,7 +357,9 @@ def send_telegram_start_message(
         chat_id=chat_id,
         text=(
             "✅ Bot is active.\n\n"
-            "Custom text."
+            "Available commands:\n"
+            "/start_alerts — enable alerts for this chat\n"
+            "/digest — request current digest"
         ),
     )
 
