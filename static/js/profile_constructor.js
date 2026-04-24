@@ -86,3 +86,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
     document.querySelectorAll(".profile-create-form").forEach(setupDigestToggle);
 });
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("[data-digest-settings]").forEach(function (root) {
+        const checkbox = root.querySelector(
+            "[data-digest-enabled], input[name='digest_enabled']"
+        );
+        const frequencyWrapper = root.querySelector("[data-digest-frequency]");
+        const frequencyInput = root.querySelector(
+            "[data-digest-interval], select[name='digest_interval_hours'], input[name='digest_interval_hours']"
+        );
+
+        if (!checkbox || !frequencyWrapper || !frequencyInput) {
+            return;
+        }
+
+        function syncDigestFrequency() {
+            const enabled = checkbox.checked;
+
+            frequencyInput.disabled = !enabled;
+            frequencyWrapper.classList.toggle("is-disabled", !enabled);
+            frequencyWrapper.setAttribute("aria-disabled", String(!enabled));
+        }
+
+        checkbox.addEventListener("change", syncDigestFrequency);
+        syncDigestFrequency();
+    });
+});

@@ -59,7 +59,6 @@ TEXT_LIKE_FIELDS = (
     "scenario",
     "status",
     "business_context",
-    "digest_enabled",
     "digest_interval_hours",
     "telegram_bot_token",
     "alert_chat_id",
@@ -131,12 +130,15 @@ class MonitoringProfileConstructorMixin:
                 "Choose a preset scenario or switch to Custom for manual control."
             )
 
-        digest_enabled = self.fields.get("digest_enabled")
-        if digest_enabled:
-            digest_enabled.help_text = (
-                "Optional. Turn on grouped digest notifications for this profile. "
-                "Instant urgent alerts are not affected."
+        digest_interval = self.fields.get("digest_interval_hours")
+        if digest_interval:
+            digest_interval.required = False
+            digest_interval.label = "Digest frequency"
+            digest_interval.help_text = (
+                "Used only when digest notifications are enabled. "
+                "Only new important/urgent events are included."
             )
+            digest_interval.widget.attrs.setdefault("data-digest-interval", "true")
 
         digest_interval = self.fields.get("digest_interval_hours")
         if digest_interval:
@@ -156,8 +158,20 @@ class MonitoringProfileConstructorMixin:
     def clean(self):
         cleaned_data = super().clean()
 
-        if not cleaned_data.get("digest_enabled"):
-            cleaned_data["digest_interval_hours"] = 1
+        digest_enabled = cleaned_data.get("digest_enabled")
+        digest_interval_hours = cleaned_data.get("digest_interval_hours")
+
+        if not digest_enabled:
+            cleaned_data["digest_interval_hours"] = (
+                MonitoringProfile.DigestInterval.EVERY_HOUR
+            )
+            return cleaned_data
+
+        if not digest_interval_hours:
+            self.add_error(
+                "digest_interval_hours",
+                "Select digest frequency or disable digest notifications.",
+            )
 
         return cleaned_data
 
@@ -206,6 +220,11 @@ class MonitoringProfileCreateForm(
         required=False,
         label="Enable digest notifications",
         initial=False,
+        widget=forms.CheckboxInput(
+            attrs={
+                "data-digest-enabled": "true",
+            }
+        ),
     )
 
     telegram_bot_token = forms.CharField(
@@ -302,6 +321,16 @@ class MonitoringProfileUpdateForm(
     forms.ModelForm,
 ):
     """Update editable monitoring profile settings."""
+
+    digest_enabled = forms.BooleanField(
+        required=False,
+        label="Enable digest notifications",
+        widget=forms.CheckboxInput(
+            attrs={
+                "data-digest-enabled": "true",
+            }
+        ),
+    )
 
     alert_chat_id = forms.CharField(
         required=False,

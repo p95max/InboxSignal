@@ -76,6 +76,9 @@ def create_due_digest_deliveries(
     results = []
 
     for source in iter_digest_sources():
+        if not source.profile.digest_enabled:
+            continue
+
         interval_hours = normalize_digest_interval_hours(
             source.profile.digest_interval_hours
         )
@@ -158,8 +161,6 @@ def create_digest_deliveries_for_period(
 
 
 def iter_digest_sources():
-    """Return active Telegram bot sources eligible for digest delivery."""
-
     return (
         ConnectedSource.objects.select_related("profile", "owner")
         .filter(

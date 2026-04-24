@@ -1,4 +1,7 @@
+from datetime import datetime
+
 import httpx
+from django.utils import timezone
 
 from apps.alerts.models import AlertDelivery
 from apps.integrations.models import ConnectedSource
@@ -40,7 +43,9 @@ def send_telegram_alert(alert: AlertDelivery) -> AlertDelivery:
     source = incoming_message.source
 
     if source is None:
-        raise NonRetryableAlertDeliveryError("Incoming message has no connected source.")
+        raise NonRetryableAlertDeliveryError(
+            "Incoming message has no connected source."
+        )
 
     bot_token = source.get_credentials()
 
@@ -260,20 +265,20 @@ def build_telegram_digest_text(alert: AlertDelivery) -> str:
     urgent = counts.get("urgent", 0)
     important = counts.get("important", 0)
 
-    period_start = payload.get("period_start", "")
-    period_end = payload.get("period_end", "")
-    interval_hours = payload.get("digest_interval_hours")
+    period_label = format_digest_period(
+        payload.get("period_start"),
+        payload.get("period_end"),
+    )
+    interval_label = format_digest_interval(
+        payload.get("digest_interval_hours"),
+    )
 
     parts = [
         "🧾 Monitoring digest",
         "",
         f"🗂 Profile: {alert.profile.name}",
-        f"🕒 Period: {period_start} — {period_end}",
-        (
-            f"⏱ Digest interval: {interval_hours}h"
-            if interval_hours
-            else "⏱ Digest interval: default"
-        ),
+        f"🕒 Period: {period_label}",
+        f"⏱ Digest interval: {interval_label}",
         f"📌 New events: {total}",
         f"🔴 Urgent: {urgent}",
         f"🟡 Important: {important}",
@@ -285,7 +290,8 @@ def build_telegram_digest_text(alert: AlertDelivery) -> str:
 
     for index, event in enumerate(events[:10], start=1):
         title = event.get("title") or (
-            f"{event.get('priority', '').title()} {event.get('category', '').title()}"
+            f"{event.get('priority', '').title()} "
+            f"{event.get('category', '').title()}"
         )
         contact_label = event.get("contact_label") or "Unknown contact"
         summary = event.get("summary") or event.get("message_preview") or ""
@@ -298,7 +304,10 @@ def build_telegram_digest_text(alert: AlertDelivery) -> str:
                 "",
                 f"{index}. {title}",
                 f"   👤 {contact_label}",
-                f"   ⚡ {event.get('priority')} / score {event.get('priority_score')}",
+                (
+                    f"   ⚡ {event.get('priority')} / "
+                    f"score {event.get('priority_score')}"
+                ),
             ]
         )
 
@@ -319,3 +328,58 @@ def build_telegram_digest_text(alert: AlertDelivery) -> str:
         text = f"{text[:3900].rstrip()}\n\n…digest was truncated."
 
     return text
+
+
+def format_digest_period(start_value: str | None, end_value: str | None) -> str:
+    """Return compact human-readable digest period label."""
+
+    start = parse_digest_period_datetime(start_value)
+    end = parse_digest_period_datetime(end_value)
+
+    if start is None or end is None:
+        return f"{start_value or 'unknown'} — {end_value or 'unknown'}"
+
+    if start.date() == end.date():
+        return (
+            f"{start.strftime('%d.%m.%Y')}, "
+            f"{start.strftime('%H:%M')}–{end.strftime('%H:%M')}"
+        )
+
+    return (
+        f"{start.strftime('%d.%m.%Y %H:%M')} — "
+        f"{end.strftime('%d.%m.%Y %H:%M')}"
+    )
+
+
+def parse_digest_period_datetime(value: str | None) -> datetime | None:
+    """Parse ISO digest period datetime and return local aware datetime."""
+
+    if not value:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(
+            parsed,
+            timezone.get_current_timezone(),
+        )
+
+    return timezone.localtime(parsed)
+
+
+def format_digest_interval(value) -> str:
+    """Return human-readable digest interval label."""
+
+    try:
+        interval_hours = int(value)
+    except (TypeError, ValueError):
+        return "default"
+
+    if interval_hours == 1:
+        return "Every hour"
+
+    return f"Every {interval_hours} hours"

@@ -327,3 +327,12 @@
 .ops-metric-row strong {
     color: var(--text-strong);
 }
+
+.digest-frequency-grid.is-disabled {
+    opacity: 0.55;
+}
+
+.digest-frequency-grid.is-disabled select,
+.digest-frequency-grid.is-disabled input {
+    cursor: not-allowed;
+}

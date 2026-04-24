@@ -72,11 +72,11 @@
                             </span>
 
                             {% if profile.digest_enabled %}
-                                <span class="badge badge-muted">
+                                <span class="badge badge-success">
                                     Digest: {{ profile.get_digest_interval_hours_display }}
                                 </span>
                             {% else %}
-                                <span class="badge badge-muted">
+                                <span class="badge badge-warning">
                                     Digest: disabled
                                 </span>
                             {% endif %}
