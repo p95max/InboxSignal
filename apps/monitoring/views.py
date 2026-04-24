@@ -3,7 +3,8 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib import messages
 from django.db.models import Count, Prefetch, Q
-from django.http import Http404, HttpRequest, HttpResponse
+from django.contrib.admin.views.decorators import staff_member_required
+from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -24,6 +25,8 @@ from apps.monitoring.forms import (
 )
 from apps.monitoring.models import Event, MonitoringProfile
 from apps.monitoring.services.scenario_presets import get_scenario_presets_for_ui
+from apps.ai.models import AIAnalysisResult
+from apps.monitoring.services.ops_visibility import get_ops_visibility_snapshot
 
 
 def _user_has_monitoring_profiles(user) -> bool:
@@ -731,3 +734,67 @@ def event_action_view(request, event_id, action: str):
         raise Http404("Unsupported event action.")
 
     return redirect(next_url)
+
+
+@staff_member_required
+def ops_visibility_view(request: HttpRequest) -> HttpResponse:
+    """Render staff-only internal ops visibility screen."""
+
+    recent_failed_alerts = (
+        AlertDelivery.objects.select_related(
+            "profile",
+            "event",
+        )
+        .filter(status=AlertDelivery.Status.FAILED)
+        .order_by("-failed_at", "-updated_at")[:20]
+    )
+
+    pending_retries = (
+        AlertDelivery.objects.select_related(
+            "profile",
+            "event",
+        )
+        .filter(
+            status=AlertDelivery.Status.PENDING,
+            attempts__gt=0,
+            next_retry_at__isnull=False,
+        )
+        .order_by("next_retry_at")[:20]
+    )
+
+    recent_ai_fallbacks = (
+        AIAnalysisResult.objects.select_related(
+            "profile",
+            "incoming_message",
+        )
+        .filter(
+            status__in=[
+                AIAnalysisResult.Status.FALLBACK,
+                AIAnalysisResult.Status.FAILED,
+            ]
+        )
+        .order_by("-created_at")[:20]
+    )
+
+    return render(
+        request,
+        "monitoring/ops_visibility.html",
+        {
+            "snapshot": get_ops_visibility_snapshot(),
+            "recent_failed_alerts": recent_failed_alerts,
+            "pending_retries": pending_retries,
+            "recent_ai_fallbacks": recent_ai_fallbacks,
+        },
+    )
+
+
+@staff_member_required
+def ops_visibility_summary_api(request: HttpRequest) -> JsonResponse:
+    """Return staff-only internal ops visibility summary as JSON."""
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "snapshot": get_ops_visibility_snapshot(),
+        }
+    )

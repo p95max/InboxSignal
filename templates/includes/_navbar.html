@@ -36,6 +36,14 @@
         >
             Dashboard
         </a>
+                {% if request.user.is_staff %}
+            <a
+                class="nav-link-modern {% if request.resolver_match.url_name == 'ops_visibility' %}is-active{% endif %}"
+                href="{% url 'ops_visibility' %}"
+            >
+                Ops
+            </a>
+        {% endif %}
     {% endif %}
 </nav>
 

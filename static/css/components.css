@@ -260,3 +260,70 @@
 .archive-decision-ignored:hover {
     border-color: rgba(148, 163, 184, 0.45);
 }
+
+/* =========================
+   Ops visibility
+   ========================= */
+
+.ops-metric-grid {
+    margin-bottom: 24px;
+}
+
+.ops-metric-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ops-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ops-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.ops-list-item:last-child {
+    border-bottom: 0;
+}
+
+.ops-error {
+    margin-top: 6px;
+    color: #ffb4c0;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.ops-metric-table {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ops-metric-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.ops-metric-row:last-child {
+    border-bottom: 0;
+}
+
+.ops-metric-row span {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.ops-metric-row strong {
+    color: var(--text-strong);
+}

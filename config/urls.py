@@ -7,14 +7,24 @@ from apps.accounts.views import account_delete_view
 from apps.monitoring.views import (
     dashboard_view,
     event_action_view,
+    onboarding_view,
+    ops_visibility_summary_api,
+    ops_visibility_view,
+    profile_create_view,
     profile_delete_view,
-    profile_detail_view, onboarding_view, profile_create_view,
+    profile_detail_view,
 )
 
 urlpatterns = [
     path("", home_view, name="home"),
     path("about/", about_view, name="about"),
     path("dashboard/", dashboard_view, name="dashboard"),
+    path("ops/visibility/", ops_visibility_view, name="ops_visibility"),
+    path(
+        "ops/visibility.json",
+        ops_visibility_summary_api,
+        name="ops_visibility_summary_api",
+    ),
     path("profiles/<int:profile_id>/", profile_detail_view, name="profile_detail"),
     path(
         "profiles/<int:profile_id>/delete/",

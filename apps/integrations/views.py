@@ -10,6 +10,14 @@ from django.views.decorators.http import require_POST
 from apps.core.services.rate_limits import RateLimitPeriod, check_rate_limit
 from apps.integrations.models import ConnectedSource
 from apps.integrations.services.telegram_bot import handle_telegram_webhook_update
+from apps.core.services.ops_metrics import (
+    WEBHOOK_REJECT_400_INVALID_JSON,
+    WEBHOOK_REJECT_403_INVALID_SECRET_TOKEN,
+    WEBHOOK_REJECT_404_UNKNOWN_SECRET,
+    WEBHOOK_REJECT_429_PROFILE_RATE_LIMITED,
+    WEBHOOK_REJECT_429_SOURCE_RATE_LIMITED,
+    increment_ops_metric,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -31,6 +39,8 @@ def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonRespo
                 "webhook_secret_present": bool(webhook_secret),
             },
         )
+        increment_ops_metric(WEBHOOK_REJECT_404_UNKNOWN_SECRET)
+
         return JsonResponse(
             {
                 "ok": False,
@@ -50,6 +60,8 @@ def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonRespo
                 ),
             },
         )
+        increment_ops_metric(WEBHOOK_REJECT_403_INVALID_SECRET_TOKEN)
+
         return JsonResponse(
             {
                 "ok": False,
@@ -76,6 +88,8 @@ def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonRespo
                 "retry_after_seconds": source_limit.retry_after_seconds,
             },
         )
+        increment_ops_metric(WEBHOOK_REJECT_429_SOURCE_RATE_LIMITED)
+
         return JsonResponse(
             {
                 "ok": False,
@@ -104,6 +118,8 @@ def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonRespo
                 "retry_after_seconds": profile_limit.retry_after_seconds,
             },
         )
+        increment_ops_metric(WEBHOOK_REJECT_429_PROFILE_RATE_LIMITED)
+
         return JsonResponse(
             {
                 "ok": False,
@@ -124,6 +140,8 @@ def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonRespo
                 "profile_id": str(source.profile_id),
             },
         )
+        increment_ops_metric(WEBHOOK_REJECT_400_INVALID_JSON)
+
         return JsonResponse(
             {
                 "ok": False,

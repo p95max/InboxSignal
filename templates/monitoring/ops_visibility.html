@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Ops visibility | Messaging Monitoring{% endblock %}
+
+{% block content %}
+
+<div class="page-header page-header-with-actions">
+    <div>
+        <h1>Ops visibility</h1>
+        <p>
+            Internal staff-only summary for alert delivery, AI fallback,
+            webhook rejection and retry health.
+        </p>
+    </div>
+
+    <div class="page-actions">
+        <a class="button" href="{% url 'ops_visibility_summary_api' %}">
+            JSON summary
+        </a>
+
+        <a class="button" href="{% url 'dashboard' %}">
+            Back to dashboard
+        </a>
+    </div>
+</div>
+
+<section class="grid grid-4 ops-metric-grid">
+    <article class="card ops-metric-card">
+        <div class="stat-value">{{ snapshot.cards.failed_alert_deliveries_today }}</div>
+        <div class="stat-label">Failed alert deliveries today</div>
+        <span class="badge badge-muted">
+            Total failed: {{ snapshot.cards.failed_alert_deliveries_total }}
+        </span>
+    </article>
+
+    <article class="card ops-metric-card">
+        <div class="stat-value">{{ snapshot.cards.ai_fallbacks_today }}</div>
+        <div class="stat-label">AI fallbacks today</div>
+        <span class="badge badge-muted">
+            AI failures: {{ snapshot.cards.ai_failures_today }}
+        </span>
+    </article>
+
+    <article class="card ops-metric-card">
+        <div class="stat-value">{{ snapshot.cards.webhook_rejects_today }}</div>
+        <div class="stat-label">Webhook rejects today</div>
+        <div class="badge-row">
+            <span class="badge badge-danger">403: {{ snapshot.cards.webhook_rejects_403_today }}</span>
+            <span class="badge badge-warning">429: {{ snapshot.cards.webhook_rejects_429_today }}</span>
+        </div>
+    </article>
+
+    <article class="card ops-metric-card">
+        <div class="stat-value">{{ snapshot.cards.pending_retries }}</div>
+        <div class="stat-label">Pending alert retries</div>
+        <div class="badge-row">
+            <span class="badge badge-warning">
+                Messages pending: {{ snapshot.cards.incoming_messages_pending }}
+            </span>
+            <span class="badge badge-danger">
+                Messages failed: {{ snapshot.cards.incoming_messages_failed }}
+            </span>
+        </div>
+    </article>
+</section>
+
+<section class="section">
+    <div class="grid grid-2">
+        <article class="card">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Pending retries</h2>
+                    <p class="panel-description">
+                        Alert deliveries that already failed at least once and are scheduled for retry.
+                    </p>
+                </div>
+            </div>
+
+            {% if pending_retries %}
+                <div class="ops-list">
+                    {% for alert in pending_retries %}
+                        <div class="ops-list-item">
+                            <div>
+                                <strong>{{ alert.profile.name }}</strong>
+                                <div class="muted">
+                                    {{ alert.channel }} / {{ alert.delivery_type }} /
+                                    attempts {{ alert.attempts }} of {{ alert.max_attempts }}
+                                </div>
+                                {% if alert.error_message %}
+                                    <div class="ops-error">{{ alert.error_message|truncatechars:180 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <span class="badge badge-warning">
+                                retry {{ alert.next_retry_at|date:"d-m-Y H:i" }}
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="muted">No pending retries.</p>
+            {% endif %}
+        </article>
+
+        <article class="card">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Failed alert deliveries</h2>
+                    <p class="panel-description">
+                        Final failed alert deliveries after retry budget was exhausted.
+                    </p>
+                </div>
+            </div>
+
+            {% if recent_failed_alerts %}
+                <div class="ops-list">
+                    {% for alert in recent_failed_alerts %}
+                        <div class="ops-list-item">
+                            <div>
+                                <strong>{{ alert.profile.name }}</strong>
+                                <div class="muted">
+                                    {{ alert.channel }} / {{ alert.delivery_type }} /
+                                    attempts {{ alert.attempts }} of {{ alert.max_attempts }}
+                                </div>
+                                {% if alert.error_message %}
+                                    <div class="ops-error">{{ alert.error_message|truncatechars:180 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <span class="badge badge-danger">
+                                failed
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="muted">No failed alert deliveries.</p>
+            {% endif %}
+        </article>
+    </div>
+</section>
+
+<section class="section">
+    <article class="card">
+        <div class="panel-header">
+            <div>
+                <h2 class="panel-title">Recent AI fallbacks / failures</h2>
+                <p class="panel-description">
+                    AI requests that fell back to rules-only behavior or failed explicitly.
+                </p>
+            </div>
+        </div>
+
+        {% if recent_ai_fallbacks %}
+            <div class="ops-list">
+                {% for result in recent_ai_fallbacks %}
+                    <div class="ops-list-item">
+                        <div>
+                            <strong>{{ result.profile.name }}</strong>
+                            <div class="muted">
+                                {{ result.status }} / {{ result.model_name|default:"no model" }} /
+                                {{ result.created_at|date:"d-m-Y H:i" }}
+                            </div>
+
+                            {% if result.fallback_reason %}
+                                <div class="ops-error">
+                                    {{ result.fallback_reason|truncatechars:220 }}
+                                </div>
+                            {% elif result.error_message %}
+                                <div class="ops-error">
+                                    {{ result.error_message|truncatechars:220 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <span class="badge badge-fallback">
+                            {{ result.status }}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="muted">No AI fallbacks or failures.</p>
+        {% endif %}
+    </article>
+</section>
+
+<section class="section">
+    <article class="card">
+        <h2 class="panel-title">Webhook rejects today</h2>
+
+        <div class="ops-metric-table">
+            {% for name, value in snapshot.webhook_rejects.items %}
+                <div class="ops-metric-row">
+                    <span>{{ name }}</span>
+                    <strong>{{ value }}</strong>
+                </div>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+{% endblock %}
