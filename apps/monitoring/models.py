@@ -51,7 +51,7 @@ class MonitoringProfile(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text="Leave empty to use the global AI_DAILY_CALL_LIMIT_PER_PROFILE setting.",
+        help_text="Leave empty to use the account-level AI daily call limit."
     )
 
     track_leads = models.BooleanField(default=True)

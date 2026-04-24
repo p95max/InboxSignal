@@ -357,43 +357,6 @@ def apply_profile_tracking_rules(
     return 0
 
 
-def apply_profile_urgency_rules(
-    *,
-    text: str,
-    category: str,
-    score: int,
-    profile: MonitoringProfile | None,
-    matched_rules: list[str],
-) -> int:
-    """Apply profile-specific urgency escalation rules."""
-
-    if profile is None:
-        return score
-
-    if score <= 0:
-        return score
-
-    if not profile.track_urgent:
-        return score
-
-    if (
-        profile.urgent_negative
-        and category == Event.Category.COMPLAINT
-        and contains_any(text, NEGATIVE_URGENCY_KEYWORDS)
-    ):
-        score = max(score, 85)
-        matched_rules.append("profile_urgent_negative")
-
-    if profile.urgent_deadlines and contains_any(text, DEADLINE_KEYWORDS):
-        score = max(score, 85)
-        matched_rules.append("profile_urgent_deadlines")
-
-    # Repeated message urgency requires IncomingMessage / ExternalContact context.
-    # It is intentionally handled later in processing, not in pure text rules.
-
-    return score
-
-
 def collect_urgency_matches(
     *,
     text: str,
