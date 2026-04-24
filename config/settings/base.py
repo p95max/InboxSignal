@@ -22,6 +22,11 @@ env = environ.Env(
 
 environ.Env.read_env(BASE_DIR / ".env")
 
+SITE_URL = env(
+    "SITE_URL",
+    default="http://localhost:8000",
+)
+
 
 # ==============================================================================
 # Core Django settings

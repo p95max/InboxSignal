@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import httpx
+from django.conf import settings
 from django.utils import timezone
 
 from apps.alerts.models import AlertDelivery
@@ -150,6 +151,8 @@ def build_telegram_alert_text(alert: AlertDelivery) -> str:
                 f"💬 Message preview: {message_preview}",
             ]
         )
+
+    parts.extend(build_site_footer())
 
     return "\n".join(parts)
 
@@ -322,6 +325,8 @@ def build_telegram_digest_text(alert: AlertDelivery) -> str:
             ]
         )
 
+    parts.extend(build_site_footer())
+
     text = "\n".join(parts)
 
     if len(text) > 3900:
@@ -383,3 +388,14 @@ def format_digest_interval(value) -> str:
         return "Every hour"
 
     return f"Every {interval_hours} hours"
+
+
+def build_site_footer() -> list[str]:
+    """Return Telegram footer with a quick website link."""
+
+    site_url = getattr(settings, "SITE_URL", "http://localhost:8000/dashboard/").rstrip("/")
+
+    return [
+        "",
+        f"🌐 Open your dashboard: {site_url}",
+    ]
