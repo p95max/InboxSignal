@@ -1,4 +1,5 @@
 from allauth.account.views import LoginView, LogoutView, SignupView
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
@@ -44,7 +45,7 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("account/delete/", account_delete_view, name="account_delete"),
 
-    path("admin/", admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls),
     path("health/", health_check, name="health"),
 
     path("api/", include("apps.monitoring.urls")),

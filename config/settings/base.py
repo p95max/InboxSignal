@@ -48,6 +48,10 @@ TIME_ZONE = "Europe/Berlin"
 
 USE_TZ = True
 
+ADMIN_URL = env("ADMIN_URL", default="admin/")
+ADMIN_URL = ADMIN_URL.strip().strip("/")
+ADMIN_URL = f"{ADMIN_URL}/"
+
 
 # ==============================================================================
 # Applications
