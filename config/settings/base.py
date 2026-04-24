@@ -260,12 +260,31 @@ CELERY_RESULT_BACKEND = env(
     default="redis://redis:6379/1",
 )
 
-CELERY_BEAT_SCHEDULE = {
-    "build-hourly-digest-notifications": {
+DIGEST_NOTIFICATIONS_ENABLED = env.bool(
+    "DIGEST_NOTIFICATIONS_ENABLED",
+    default=True,
+)
+
+DIGEST_BEAT_MINUTE = env(
+    "DIGEST_BEAT_MINUTE",
+    default="5",
+)
+
+DIGEST_BEAT_HOUR = env(
+    "DIGEST_BEAT_HOUR",
+    default="*",
+)
+
+CELERY_BEAT_SCHEDULE = {}
+
+if DIGEST_NOTIFICATIONS_ENABLED:
+    CELERY_BEAT_SCHEDULE["build-hourly-digest-notifications"] = {
         "task": "apps.alerts.tasks.build_and_enqueue_digest_notifications_task",
-        "schedule": crontab(minute=5),
-    },
-}
+        "schedule": crontab(
+            minute=DIGEST_BEAT_MINUTE,
+            hour=DIGEST_BEAT_HOUR,
+        ),
+    }
 
 
 # ==============================================================================
