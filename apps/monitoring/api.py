@@ -389,7 +389,7 @@ def validate_profile_payload(
 
             if value > account_ai_limit:
                 errors[field_name] = (
-                    "Profile AI limit cannot be higher than the account daily AI quota."
+                     "Profile AI limit cannot be higher than the account daily AI quota."
                 )
                 continue
 

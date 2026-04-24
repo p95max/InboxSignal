@@ -337,10 +337,9 @@ class MonitoringProfileUpdateForm(
 
         self.fields["ai_daily_call_limit"].widget.attrs["max"] = account_ai_limit
         self.fields["ai_daily_call_limit"].help_text = (
-            "Optional. Leave empty to disable the profile-level AI limit. "
-            f"The profile will use the account-level daily AI quota "
-            f"({account_ai_limit} AI calls/day). "
-            "Set a number to add a stricter limit for this profile."
+            "Optional. Leave empty to use only the account-level AI quota. "
+            f"Account quota: {account_ai_limit} AI calls/day. "
+            "Set a lower number to add a stricter limit for this profile."
         )
 
     def clean_ai_daily_call_limit(self):

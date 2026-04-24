@@ -19,6 +19,7 @@ docker compose exec web python manage.py shell
 
 # make migrations in docker env
 ```bash
+docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py check
 docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py makemigrations accounts monitoring integrations ai alerts
 ```
 ```bash

@@ -361,11 +361,6 @@ AI_DAILY_CALL_LIMIT_PER_USER = env.int(
     default=50,
 )
 
-AI_DAILY_CALL_LIMIT_PER_PROFILE = env.int(
-    "AI_DAILY_CALL_LIMIT_PER_PROFILE",
-    default=20,
-)
-
 AI_DAILY_COST_LIMIT_USD_PER_USER = Decimal(
     env("AI_DAILY_COST_LIMIT_USD_PER_USER", default="1.00")
 )
