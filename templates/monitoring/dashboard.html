@@ -71,9 +71,15 @@
                                 Profile status: {{ profile.get_status_display }}
                             </span>
 
-                            <span class="badge badge-muted">
-                                Digest: {{ profile.get_digest_interval_hours_display }}
-                            </span>
+                            {% if profile.digest_enabled %}
+                                <span class="badge badge-muted">
+                                    Digest: {{ profile.get_digest_interval_hours_display }}
+                                </span>
+                            {% else %}
+                                <span class="badge badge-muted">
+                                    Digest: disabled
+                                </span>
+                            {% endif %}
 
                             {% if profile.telegram_bot_sources %}
                                 {% for source in profile.telegram_bot_sources %}

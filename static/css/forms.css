@@ -297,3 +297,57 @@ input[type="radio"],
     background: var(--primary-soft);
     color: #aac7ff;
 }
+
+/* =========================
+   Profile form alignment
+   ========================= */
+
+.form-field {
+    min-width: 0;
+}
+
+.form-grid > .helptext.form-grid-full {
+    margin-top: -8px;
+}
+
+.profile-create-form .form-section {
+    min-width: 0;
+}
+
+.digest-settings-card {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.digest-settings-header {
+    display: grid;
+    gap: 8px;
+}
+
+.digest-toggle-row {
+    width: 100%;
+    min-height: 44px;
+}
+
+.digest-frequency-grid {
+    align-items: start;
+}
+
+.digest-frequency-grid.is-disabled {
+    opacity: 0.55;
+}
+
+.digest-frequency-grid.is-disabled select,
+.digest-frequency-grid.is-disabled .form-control {
+    cursor: not-allowed;
+}
+
+@media (min-width: 781px) {
+    .digest-frequency-grid {
+        grid-template-columns: minmax(260px, 0.5fr) minmax(0, 0.5fr);
+    }
+}

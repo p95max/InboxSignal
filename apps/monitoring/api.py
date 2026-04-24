@@ -19,6 +19,7 @@ PROFILE_MUTABLE_FIELDS = {
     "scenario",
     "status",
     "business_context",
+    "digest_enabled",
     "digest_interval_hours",
     "track_leads",
     "track_complaints",
@@ -40,6 +41,7 @@ PROFILE_MUTABLE_FIELDS = {
 }
 
 PROFILE_BOOLEAN_FIELDS = {
+    "digest_enabled",
     "track_leads",
     "track_complaints",
     "track_requests",
@@ -600,6 +602,7 @@ def serialize_profile(profile: MonitoringProfile) -> dict:
         "scenario": profile.scenario,
         "status": profile.status,
         "business_context": profile.business_context,
+        "digest_enabled": profile.digest_enabled,
         "digest_interval_hours": profile.digest_interval_hours,
         "digest_interval_label": profile.get_digest_interval_hours_display(),
         "track_leads": profile.track_leads,

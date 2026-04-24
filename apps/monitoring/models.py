@@ -54,6 +54,11 @@ class MonitoringProfile(models.Model):
         help_text=_("Optional plain text business context, max 300 characters."),
     )
 
+    digest_enabled = models.BooleanField(
+        default=True,
+        help_text=_("Enable grouped digest notifications for this profile."),
+    )
+
     digest_interval_hours = models.PositiveSmallIntegerField(
         choices=DigestInterval.choices,
         default=DigestInterval.EVERY_HOUR,

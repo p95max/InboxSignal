@@ -39,7 +39,7 @@
     {% endif %}
 
     {% if form.scenario %}
-        <div class="helptext">
+        <div class="helptext form-grid-full">
             Changing scenario applies preset values to the constructor checkboxes.
             You can still fine-tune them manually afterwards.
         </div>
@@ -79,21 +79,43 @@
         </div>
     {% endif %}
 
-    {% if form.digest_interval_hours %}
-        <div>
-            <label for="{{ form.digest_interval_hours.id_for_label }}">
-                {{ form.digest_interval_hours.label }}
+</div>
+
+{% if form.digest_enabled and form.digest_interval_hours %}
+    <div class="form-section digest-settings-card" data-digest-settings>
+        <div class="form-section-label">Digest notifications</div>
+
+        <div class="digest-settings-header">
+            <label class="checkbox-row digest-toggle-row">
+                {{ form.digest_enabled }}
+                <span>{{ form.digest_enabled.label }}</span>
             </label>
-            {{ form.digest_interval_hours }}
-            {% if form.digest_interval_hours.help_text %}
-                <div class="helptext">{{ form.digest_interval_hours.help_text }}</div>
+
+            {% if form.digest_enabled.help_text %}
+                <div class="helptext">{{ form.digest_enabled.help_text }}</div>
             {% endif %}
-            {% for error in form.digest_interval_hours.errors %}
+
+            {% for error in form.digest_enabled.errors %}
                 <div class="form-error">{{ error }}</div>
             {% endfor %}
         </div>
-    {% endif %}
-</div>
+
+        <div class="form-grid digest-frequency-grid" data-digest-frequency>
+            <div class="form-field">
+                <label for="{{ form.digest_interval_hours.id_for_label }}">
+                    {{ form.digest_interval_hours.label }}
+                </label>
+                {{ form.digest_interval_hours }}
+                {% if form.digest_interval_hours.help_text %}
+                    <div class="helptext">{{ form.digest_interval_hours.help_text }}</div>
+                {% endif %}
+                {% for error in form.digest_interval_hours.errors %}
+                    <div class="form-error">{{ error }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endif %}
 
 <div class="form-section">
     <div class="form-section-label">What to track</div>
@@ -193,14 +215,13 @@
 <div class="form-section">
     <div class="form-section-label">What to extract</div>
 
-    {% if form.extract_date_or_time %}
-        <label class="checkbox-row">
-            {{ form.extract_date_or_time }}
-            <span>{{ form.extract_date_or_time.label }}</span>
-        </label>
-    {% endif %}
-
     <div class="checkbox-grid">
+        {% if form.extract_date_or_time %}
+            <label class="checkbox-row">
+                {{ form.extract_date_or_time }}
+                <span>{{ form.extract_date_or_time.label }}</span>
+            </label>
+        {% endif %}
         {% if form.extract_name %}
             <label class="checkbox-row">
                 {{ form.extract_name }}

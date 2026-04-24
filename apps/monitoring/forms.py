@@ -46,6 +46,7 @@ PROFILE_CONSTRUCTOR_FIELDS = (
     "name",
     "scenario",
     "business_context",
+    "digest_enabled",
     "digest_interval_hours",
     *TRACK_FIELDS,
     *IGNORE_FIELDS,
@@ -58,6 +59,7 @@ TEXT_LIKE_FIELDS = (
     "scenario",
     "status",
     "business_context",
+    "digest_enabled",
     "digest_interval_hours",
     "telegram_bot_token",
     "alert_chat_id",
@@ -65,6 +67,7 @@ TEXT_LIKE_FIELDS = (
 )
 
 FIELD_LABELS = {
+    "digest_enabled": "Enable digest notifications",
     "track_leads": "Leads",
     "track_complaints": "Complaints",
     "track_requests": "Requests / bookings",
@@ -128,11 +131,18 @@ class MonitoringProfileConstructorMixin:
                 "Choose a preset scenario or switch to Custom for manual control."
             )
 
+        digest_enabled = self.fields.get("digest_enabled")
+        if digest_enabled:
+            digest_enabled.help_text = (
+                "Optional. Turn on grouped digest notifications for this profile. "
+                "Instant urgent alerts are not affected."
+            )
+
         digest_interval = self.fields.get("digest_interval_hours")
         if digest_interval:
             digest_interval.label = "Digest frequency"
             digest_interval.help_text = (
-                "How often this profile sends grouped digest notifications. "
+                "Used only when digest notifications are enabled. "
                 "Only new important/urgent events are included."
             )
 
@@ -142,6 +152,14 @@ class MonitoringProfileConstructorMixin:
                 "Optional. Enter Telegram chat ID for alerts, or after profile creation "
                 "send `/start_alerts` to your bot from the destination chat."
             )
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        if not cleaned_data.get("digest_enabled"):
+            cleaned_data["digest_interval_hours"] = 1
+
+        return cleaned_data
 
     def clean_business_context(self):
         value = self.cleaned_data.get("business_context", "")
@@ -183,6 +201,12 @@ class MonitoringProfileCreateForm(
     forms.ModelForm,
 ):
     """Create a monitoring profile and connect a Telegram bot source."""
+
+    digest_enabled = forms.BooleanField(
+        required=False,
+        label="Enable digest notifications",
+        initial=False,
+    )
 
     telegram_bot_token = forms.CharField(
         label="Telegram bot token",
@@ -308,6 +332,7 @@ class MonitoringProfileUpdateForm(
             "scenario",
             "status",
             "business_context",
+            "digest_enabled",
             "digest_interval_hours",
             *TRACK_FIELDS,
             *IGNORE_FIELDS,

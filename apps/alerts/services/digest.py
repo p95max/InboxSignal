@@ -167,6 +167,7 @@ def iter_digest_sources():
             status=ConnectedSource.Status.ACTIVE,
             is_deleted=False,
             profile__status=MonitoringProfile.Status.ACTIVE,
+            profile__digest_enabled=True,
         )
         .order_by("profile_id", "id")
     )
@@ -215,6 +216,16 @@ def create_digest_delivery_for_source(
     period: DigestPeriod,
 ) -> DigestBuildResult:
     """Create one digest delivery for a Telegram alert source."""
+
+    if not source.profile.digest_enabled:
+        logger.info(
+            "digest_delivery_skipped_disabled",
+            extra={
+                "profile_id": source.profile_id,
+                "source_id": source.id,
+            },
+        )
+        return DigestBuildResult(alert=None, created=False)
 
     events = list(
         get_digest_events_for_profile(
