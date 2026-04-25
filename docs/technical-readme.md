@@ -1217,3 +1217,40 @@ After the grace period expires, remove old webhook credentials:
 ```bash
 docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhook cleanup_rotated
 ```
+
+# Production deployment
+
+## Runtime services
+
+- `web` — Gunicorn
+- `celery_worker` — async processing
+- `celery_beat` — periodic tasks; run only one instance
+- `db` — PostgreSQL
+- `redis` — Redis
+
+## First deploy
+
+```bash
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml run --rm web python manage.py migrate
+docker compose -f docker-compose.prod.yml run --rm web python manage.py collectstatic --noinput
+docker compose -f docker-compose.prod.yml up -d
+```
+
+## Update deploy
+
+```bash
+git pull
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml run --rm web python manage.py migrate
+docker compose -f docker-compose.prod.yml run --rm web python manage.py collectstatic --noinput
+docker compose -f docker-compose.prod.yml up -d
+```
+
+## Logs
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f web
+docker compose -f docker-compose.prod.yml logs -f celery_worker
+docker compose -f docker-compose.prod.yml logs -f celery_beat
+```
