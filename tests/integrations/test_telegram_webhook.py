@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.models import IncomingMessage
@@ -45,8 +48,12 @@ def telegram_payload():
 
 
 def build_telegram_secret_headers(source):
+    return build_telegram_headers(source.webhook_secret_token)
+
+
+def build_telegram_headers(token: str):
     return {
-        "HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN": source.webhook_secret_token,
+        "HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN": token,
     }
 
 
@@ -288,3 +295,161 @@ def test_telegram_webhook_ignores_unsupported_update(
 
     assert IncomingMessage.objects.count() == 0
     apply_async_mock.assert_not_called()
+
+@pytest.mark.django_db(transaction=True)
+def test_telegram_webhook_accepts_previous_secret_and_previous_token_during_grace_period(
+    client,
+    telegram_source,
+    telegram_payload,
+    mocker,
+):
+    mocker.patch(
+        "apps.monitoring.services.ingestion.process_incoming_message_task.apply_async",
+    )
+
+    telegram_source.previous_webhook_secret = "old-test-secret"
+    telegram_source.previous_webhook_secret_token = "old-test-secret-token"
+    telegram_source.previous_webhook_secret_valid_until = (
+        timezone.now() + timedelta(minutes=15)
+    )
+    telegram_source.save(
+        update_fields=[
+            "previous_webhook_secret",
+            "previous_webhook_secret_token",
+            "previous_webhook_secret_valid_until",
+            "updated_at",
+        ]
+    )
+
+    url = reverse(
+        "integrations:telegram_bot_webhook",
+        kwargs={"webhook_secret": telegram_source.previous_webhook_secret},
+    )
+
+    response = client.post(
+        url,
+        data=telegram_payload,
+        content_type="application/json",
+        **build_telegram_headers(telegram_source.previous_webhook_secret_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert response.json()["ingested"] is True
+
+
+@pytest.mark.django_db
+def test_telegram_webhook_rejects_previous_secret_after_grace_period(
+    client,
+    telegram_source,
+    telegram_payload,
+):
+    telegram_source.previous_webhook_secret = "old-test-secret"
+    telegram_source.previous_webhook_secret_token = "old-test-secret-token"
+    telegram_source.previous_webhook_secret_valid_until = (
+        timezone.now() - timedelta(minutes=1)
+    )
+    telegram_source.save(
+        update_fields=[
+            "previous_webhook_secret",
+            "previous_webhook_secret_token",
+            "previous_webhook_secret_valid_until",
+            "updated_at",
+        ]
+    )
+
+    url = reverse(
+        "integrations:telegram_bot_webhook",
+        kwargs={"webhook_secret": telegram_source.previous_webhook_secret},
+    )
+
+    response = client.post(
+        url,
+        data=telegram_payload,
+        content_type="application/json",
+        **build_telegram_headers(telegram_source.previous_webhook_secret_token),
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "ok": False,
+        "error": "not_found",
+    }
+
+
+@pytest.mark.django_db
+def test_telegram_webhook_rejects_previous_secret_with_current_token(
+    client,
+    telegram_source,
+    telegram_payload,
+):
+    telegram_source.previous_webhook_secret = "old-test-secret"
+    telegram_source.previous_webhook_secret_token = "old-test-secret-token"
+    telegram_source.previous_webhook_secret_valid_until = (
+        timezone.now() + timedelta(minutes=15)
+    )
+    telegram_source.save(
+        update_fields=[
+            "previous_webhook_secret",
+            "previous_webhook_secret_token",
+            "previous_webhook_secret_valid_until",
+            "updated_at",
+        ]
+    )
+
+    url = reverse(
+        "integrations:telegram_bot_webhook",
+        kwargs={"webhook_secret": telegram_source.previous_webhook_secret},
+    )
+
+    response = client.post(
+        url,
+        data=telegram_payload,
+        content_type="application/json",
+        **build_telegram_headers(telegram_source.webhook_secret_token),
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "ok": False,
+        "error": "forbidden",
+    }
+
+
+@pytest.mark.django_db
+def test_telegram_webhook_rejects_current_secret_with_previous_token(
+    client,
+    telegram_source,
+    telegram_payload,
+):
+    telegram_source.previous_webhook_secret = "old-test-secret"
+    telegram_source.previous_webhook_secret_token = "old-test-secret-token"
+    telegram_source.previous_webhook_secret_valid_until = (
+        timezone.now() + timedelta(minutes=15)
+    )
+    telegram_source.save(
+        update_fields=[
+            "previous_webhook_secret",
+            "previous_webhook_secret_token",
+            "previous_webhook_secret_valid_until",
+            "updated_at",
+        ]
+    )
+
+    url = reverse(
+        "integrations:telegram_bot_webhook",
+        kwargs={"webhook_secret": telegram_source.webhook_secret},
+    )
+
+    response = client.post(
+        url,
+        data=telegram_payload,
+        content_type="application/json",
+        **build_telegram_headers(telegram_source.previous_webhook_secret_token),
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "ok": False,
+        "error": "forbidden",
+    }

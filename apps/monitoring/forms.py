@@ -5,6 +5,8 @@ from cryptography.fernet import Fernet
 from django import forms
 from django.conf import settings
 from django.db import transaction
+from django.db import models
+from django.db.models import Q
 
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.models import MonitoringProfile
@@ -464,9 +466,23 @@ def generate_webhook_secret() -> str:
     while True:
         secret = secrets.token_urlsafe(32)
 
-        if not ConnectedSource.objects.filter(webhook_secret=secret).exists():
+        if not ConnectedSource.objects.filter(
+                models.Q(webhook_secret=secret)
+                | models.Q(previous_webhook_secret=secret)
+        ).exists():
             return secret
 
+def generate_webhook_secret_token() -> str:
+    """Generate unique Telegram webhook secret token."""
+
+    while True:
+        token = secrets.token_urlsafe(32)
+
+        if not ConnectedSource.objects.filter(
+            Q(webhook_secret_token=token)
+            | Q(previous_webhook_secret_token=token)
+        ).exists():
+            return token
 
 def generate_alert_setup_token() -> str:
     """Generate a random Telegram alert setup token.

@@ -86,6 +86,32 @@ class ConnectedSource(models.Model):
         ),
     )
 
+    previous_webhook_secret = models.CharField(
+        max_length=255,
+        blank=True,
+        db_index=True,
+        help_text=_("Previous webhook path secret accepted during rotation grace period."),
+    )
+
+    previous_webhook_secret_token = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text=_("Previous Telegram webhook secret token accepted during rotation grace period."),
+    )
+
+    previous_webhook_secret_valid_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text=_("Until when previous webhook credentials are accepted."),
+    )
+
+    webhook_secret_rotated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_("Last webhook secret rotation timestamp."),
+    )
+
     last_sync_at = models.DateTimeField(null=True, blank=True)
     last_error_at = models.DateTimeField(null=True, blank=True)
     last_error_message = models.TextField(blank=True)
@@ -106,12 +132,33 @@ class ConnectedSource(models.Model):
             models.Index(fields=["source_type"]),
             models.Index(fields=["external_id"]),
             models.Index(fields=["is_deleted"]),
+            models.Index(fields=["webhook_secret"]),
+            models.Index(fields=["previous_webhook_secret"]),
+            models.Index(fields=["previous_webhook_secret_valid_until"]),
         ]
         constraints = [
             models.UniqueConstraint(
                 fields=["profile", "source_type", "external_id"],
                 condition=models.Q(is_deleted=False) & ~models.Q(external_id=""),
                 name="unique_active_source_per_profile_type_external_id",
+            ),
+            models.UniqueConstraint(
+                fields=["webhook_secret"],
+                condition=(
+                        models.Q(is_deleted=False)
+                        & models.Q(source_type="telegram_bot")
+                        & ~models.Q(webhook_secret="")
+                ),
+                name="unique_active_telegram_webhook_secret",
+            ),
+            models.UniqueConstraint(
+                fields=["previous_webhook_secret"],
+                condition=(
+                        models.Q(is_deleted=False)
+                        & models.Q(source_type="telegram_bot")
+                        & ~models.Q(previous_webhook_secret="")
+                ),
+                name="unique_active_previous_telegram_webhook_secret",
             ),
         ]
 
@@ -203,3 +250,36 @@ class ConnectedSource(models.Model):
             return ""
 
         return f"******{self.credentials_fingerprint}"
+
+    def has_valid_previous_webhook_secret(self, now=None) -> bool:
+        """Return True if previous webhook credentials are still within grace window."""
+
+        if not self.previous_webhook_secret:
+            return False
+
+        if not self.previous_webhook_secret_token:
+            return False
+
+        if self.previous_webhook_secret_valid_until is None:
+            return False
+
+        now = now or timezone.now()
+
+        return self.previous_webhook_secret_valid_until > now
+
+    def clear_previous_webhook_secret(self, *, save=True) -> None:
+        """Remove expired previous webhook credentials."""
+
+        self.previous_webhook_secret = ""
+        self.previous_webhook_secret_token = ""
+        self.previous_webhook_secret_valid_until = None
+
+        if save:
+            self.save(
+                update_fields=[
+                    "previous_webhook_secret",
+                    "previous_webhook_secret_token",
+                    "previous_webhook_secret_valid_until",
+                    "updated_at",
+                ]
+            )

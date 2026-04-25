@@ -6,6 +6,9 @@ from django.conf import settings
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from dataclasses import dataclass
+from django.db.models import Q
+from django.utils import timezone
 
 from apps.core.services.rate_limits import RateLimitPeriod, check_rate_limit
 from apps.integrations.models import ConnectedSource
@@ -24,15 +27,22 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_SECRET_TOKEN_HEADER = "X-Telegram-Bot-Api-Secret-Token"
 
+@dataclass(frozen=True)
+class TelegramWebhookSourceMatch:
+    """Resolved Telegram source together with matched webhook secret generation."""
+
+    source: ConnectedSource
+    secret_generation: str  # "current" or "previous"
+
 
 @csrf_exempt
 @require_POST
 def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonResponse:
     """Telegram Bot API webhook endpoint."""
 
-    source = get_telegram_source_by_webhook_secret(webhook_secret)
+    source_match = get_telegram_source_by_webhook_secret(webhook_secret)
 
-    if source is None:
+    if source_match is None:
         logger.warning(
             "telegram_webhook_rejected_unknown_secret",
             extra={
@@ -49,7 +59,13 @@ def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonRespo
             status=404,
         )
 
-    if not is_valid_telegram_secret_token(request=request, source=source):
+    source = source_match.source
+
+    if not is_valid_telegram_secret_token(
+            request=request,
+            source_match=source_match,
+    ):
+        ...
         logger.warning(
             "telegram_webhook_rejected_invalid_secret_token",
             extra={
@@ -182,11 +198,17 @@ def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonRespo
 def is_valid_telegram_secret_token(
     *,
     request: HttpRequest,
-    source: ConnectedSource,
+    source_match: TelegramWebhookSourceMatch,
 ) -> bool:
-    """Validate Telegram secret token header in constant time."""
+    """Validate Telegram secret token for the matched webhook secret generation."""
 
-    expected = (source.webhook_secret_token or "").strip()
+    source = source_match.source
+
+    if source_match.secret_generation == "previous":
+        expected = (source.previous_webhook_secret_token or "").strip()
+    else:
+        expected = (source.webhook_secret_token or "").strip()
+
     provided = (
         request.headers.get(TELEGRAM_SECRET_TOKEN_HEADER, "").strip()
     )
@@ -199,19 +221,47 @@ def is_valid_telegram_secret_token(
 
 def get_telegram_source_by_webhook_secret(
     webhook_secret: str,
-) -> ConnectedSource | None:
-    """Return active Telegram bot source by webhook secret."""
+) -> TelegramWebhookSourceMatch | None:
+    """Return active Telegram source matched by current or previous webhook secret."""
 
     if not webhook_secret:
         return None
 
-    return (
+    now = timezone.now()
+
+    source = (
         ConnectedSource.objects.select_related("profile", "owner")
         .filter(
             source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
             status=ConnectedSource.Status.ACTIVE,
             is_deleted=False,
-            webhook_secret=webhook_secret,
+        )
+        .filter(
+            Q(webhook_secret=webhook_secret)
+            | Q(
+                previous_webhook_secret=webhook_secret,
+                previous_webhook_secret_valid_until__gt=now,
+            )
         )
         .first()
     )
+
+    if source is None:
+        return None
+
+    if source.webhook_secret == webhook_secret:
+        return TelegramWebhookSourceMatch(
+            source=source,
+            secret_generation="current",
+        )
+
+    if (
+        source.previous_webhook_secret == webhook_secret
+        and source.has_valid_previous_webhook_secret(now=now)
+    ):
+        return TelegramWebhookSourceMatch(
+            source=source,
+            secret_generation="previous",
+        )
+
+    return None
