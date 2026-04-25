@@ -1,7 +1,9 @@
 services:
   web:
     environment:
+      DJANGO_SETTINGS_MODULE: config.settings.local
       RUN_MIGRATIONS: "1"
+      DJANGO_DEBUG: "True"
     build:
       context: .
       dockerfile: docker/web/Dockerfile
@@ -18,7 +20,9 @@ services:
 
   celery_worker:
     environment:
+      DJANGO_SETTINGS_MODULE: config.settings.local
       RUN_MIGRATIONS: "0"
+      DJANGO_DEBUG: "True"
     build:
       context: .
       dockerfile: docker/web/Dockerfile
@@ -33,7 +37,9 @@ services:
 
   celery_beat:
     environment:
+      DJANGO_SETTINGS_MODULE: config.settings.local
       RUN_MIGRATIONS: "0"
+      DJANGO_DEBUG: "True"
     build:
       context: .
       dockerfile: docker/web/Dockerfile
