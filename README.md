@@ -40,6 +40,7 @@ The system is **not** a chat client and **not** a CRM. It is a message triage ba
   - `/start`
   - `/start_alerts <setup-token>`
   - `/digest`
+- Telegram webhook secrets can be safely rotated with a dedicated management command, preserving the previous secret pair during a short grace period to avoid ingestion downtime in webhook mode.
 - rules-first message analysis with optional AI enrichment
 - event creation with priority scoring
 - instant Telegram alert delivery
@@ -361,6 +362,7 @@ Implemented end-to-end:
 - Telegram source connection
 - Telegram webhook and polling ingestion
 - Telegram bot system commands with token-protected alert setup
+- Telegram webhook secrets can be safely rotated with a dedicated management command, preserving the previous secret pair during a short grace period to avoid ingestion downtime in webhook mode.
 - rules-first analysis and optional AI enrichment
 - event creation
 - instant Telegram alert delivery

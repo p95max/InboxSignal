@@ -1167,87 +1167,53 @@ In local development, email confirmation content may be printed to stdout depend
 
 That is acceptable for local bootstrap, but it must not be treated as production-safe behavior.
 
----
+## 21. Telegram webhook secret rotation
 
-## 21. Known limitations / current debt
+### The rotation command:
 
-This is the blunt version.
+- generates a new webhook path secret;
+- generates a new Telegram secret token;
+- keeps the previous secret pair valid for the configured grace period;
+- calls Telegram setWebhook with the new URL and new secret token;
+- rolls back database changes if Telegram webhook registration fails.
 
-- local development uses Django `runserver`, not production WSGI/ASGI setup
-- no production deployment document yet
-- no dedicated metrics stack yet
-- no external error tracking yet
-- no separate staging config documented
-- webhook secret rotation procedure should be documented before real production use
-- digest delivery currently targets Telegram only
-- WhatsApp/multi-channel abstraction exists mostly at model level, not as a feature-complete adapter
-- ops visibility is useful but intentionally minimal; it is not an observability platform
+Telegram webhook mode uses two independent secrets:
 
-None of this blocks MVP development, but these are the first places that will hurt under real usage.
+- path secret: `/integrations/telegram/bot/<webhook_secret>/`
+- Telegram header secret: `X-Telegram-Bot-Api-Secret-Token`
 
----
+Both secrets must be rotated through the management command, not by manually editing fields in Django admin.
 
-## 22. Recommended next steps
+> This is only relevant for webhook mode. Polling mode does not use webhook URLs, `webhook_secret`, or `X-Telegram-Bot-Api-Secret-Token`.
 
-### Short term
+### Rotate webhook credentials
 
-1. Add production deployment notes.
-2. Document Telegram webhook secret rotation.
-3. Add a short operator playbook for digest/alert failures.
-4. Add `.env.example` entries for every documented optional setting, including `DIGEST_MAX_EVENTS_PER_NOTIFICATION` if missing.
-5. Review sensitive local-only logs before any non-dev deployment.
+Use this command when the project is running with a public HTTPS webhook URL:
 
-### Medium term
+```bash
+docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhook rotate \
+  --source-id 2 \
+  --base-url https://your-public-domain.example \
+  --grace-minutes 15
+```
 
-1. Add structured log shipping.
-2. Add external error tracking.
-3. Add queue depth / failed task monitoring.
-4. Add replay/reprocess tooling for failed incoming messages.
-5. Add richer analytics around categories, priorities, and response patterns.
+### Grace period behavior
 
-### Longer term
+During the grace period, the application accepts only matching secret generations:
 
-1. Formalize adapter abstraction for multi-channel ingestion.
-2. Add more delivery channels: email, webhook, Slack-like target.
-3. Add semantic search / analytics layer.
-4. Add CRM export or lightweight follow-up workflow.
+> new webhook_secret + new webhook_secret_token
+> old webhook_secret + old webhook_secret_token
 
----
+It does not accept mixed secret generations:
 
-## 23. Quick start checklist
+> old webhook_secret + new webhook_secret_token
+> new webhook_secret + old webhook_secret_token
 
-Shortest local path from clone to working Telegram flow:
+This avoids downtime during Telegram webhook updates while keeping the trust model strict.
 
-1. Copy `.env.example` to `.env`.
-2. Set a valid `FIELD_ENCRYPTION_KEY`.
-3. Set database and Redis variables.
-4. Run `docker compose up --build`.
-5. Open `http://localhost:8000`.
-6. Create or use bootstrap superuser.
-7. Complete onboarding.
-8. Create a monitoring profile and provide Telegram bot token.
-9. Send `/start_alerts <setup-token>` from the intended alert chat.
-10. For local work, use `telegram_poll`.
-11. For webhook testing, use `telegram_webhook set` with public HTTPS.
-12. Watch `celery_worker` and `celery_beat` logs while sending messages.
-13. Trigger `/digest` from the alert chat to verify digest delivery.
+### Clean up expired previous credentials
 
----
-
-## 24. Bottom line
-
-This project is already beyond a toy CRUD app.
-
-It has:
-
-- real Telegram ingestion
-- onboarding and configurable product flow
-- scenario presets and custom constructor
-- async processing
-- AI enrichment with usage controls
-- event triage lifecycle
-- instant alerts with retries
-- digest notifications with Celery Beat and idempotency
-- Telegram system commands with protected alert setup
-- hardened webhook auth
-- practical admin and ops visibility surface
+After the grace period expires, remove old webhook credentials:
+```bash
+docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhook cleanup_rotated
+```
