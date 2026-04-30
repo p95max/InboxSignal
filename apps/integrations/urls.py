@@ -11,4 +11,9 @@ urlpatterns = [
         telegram_bot_webhook,
         name="telegram_bot_webhook",
     ),
+    path(
+        "whatsapp/<str:webhook_secret>/",
+        whatsapp_webhook,
+        name="whatsapp_webhook",
+    ),
 ]
