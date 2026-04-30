@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.integrations.views import telegram_bot_webhook
+from apps.integrations.views import telegram_bot_webhook, whatsapp_webhook
 
 
 app_name = "integrations"
