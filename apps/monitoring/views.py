@@ -697,6 +697,7 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
         },
     )
 
+
 def filter_archived_events_by_decision(events, decision: str):
     """Filter archived events by the decision made before archiving."""
 
