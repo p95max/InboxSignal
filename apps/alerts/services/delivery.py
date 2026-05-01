@@ -6,6 +6,7 @@ from apps.alerts.services.cooldown import (
     set_alert_cooldown,
 )
 from apps.monitoring.models import Event
+from apps.integrations.models import ConnectedSource
 
 
 logger = logging.getLogger(__name__)
@@ -100,33 +101,47 @@ def create_alert_delivery_for_event(event: Event) -> AlertDelivery | None:
 
 
 def get_default_recipient(event: Event) -> str:
-    """Return explicit Telegram alert recipient for internal alert delivery.
+    """Return Telegram alert recipient configured for the event profile.
 
-    Alerts are internal notifications and must never be sent back to the same
-    chat where the incoming customer message was received.
+    Incoming source and alert destination are different concepts.
+    Gmail can be an incoming source, while Telegram remains the alert channel.
     """
 
-    message = event.incoming_message
+    telegram_source = (
+        ConnectedSource.objects.filter(
+            profile=event.profile,
+            source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+            status=ConnectedSource.Status.ACTIVE,
+            is_deleted=False,
+        )
+        .order_by("id")
+        .first()
+    )
 
-    if message is None or message.source is None:
+    if telegram_source is None:
         return ""
 
-    metadata = message.source.metadata or {}
+    metadata = telegram_source.metadata or {}
     alert_chat_id = str(metadata.get("alert_chat_id", "")).strip()
 
     if not alert_chat_id:
         return ""
 
-    incoming_chat_id = str(message.external_chat_id or "").strip()
+    message = event.incoming_message
 
-    if incoming_chat_id and alert_chat_id == incoming_chat_id:
+    if (
+        message
+        and message.channel == message.Channel.TELEGRAM
+        and message.external_chat_id
+        and alert_chat_id == str(message.external_chat_id).strip()
+    ):
         logger.warning(
             "alert_delivery_skipped_same_chat_recipient",
             extra={
                 "event_id": str(event.id),
                 "profile_id": event.profile_id,
                 "source_id": message.source_id,
-                "chat_id": incoming_chat_id,
+                "chat_id": message.external_chat_id,
             },
         )
         return ""

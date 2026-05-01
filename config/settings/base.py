@@ -187,6 +187,12 @@ SOCIALACCOUNT_EMAIL_VERIFICATION = env(
 
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
 GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", default="")
+GMAIL_OAUTH_SCOPES = env.list(
+    "GMAIL_OAUTH_SCOPES",
+    default=[
+        "https://www.googleapis.com/auth/gmail.readonly",
+    ],
+)
 ACCOUNT_ADAPTER = "apps.accounts.adapters.AccountAdapter"
 
 GOOGLE_AUTH_ENABLED = bool(
@@ -284,6 +290,26 @@ DIGEST_BEAT_HOUR = env(
     default="*",
 )
 
+GMAIL_POLLING_ENABLED = env.bool(
+    "GMAIL_POLLING_ENABLED",
+    default=True,
+)
+
+GMAIL_POLLING_BEAT_MINUTE = env(
+    "GMAIL_POLLING_BEAT_MINUTE",
+    default="*/5",
+)
+
+GMAIL_MAX_MESSAGES_PER_SYNC = env.int(
+    "GMAIL_MAX_MESSAGES_PER_SYNC",
+    default=20,
+)
+
+GMAIL_MAX_BODY_CHARS = env.int(
+    "GMAIL_MAX_BODY_CHARS",
+    default=8000,
+)
+
 CELERY_BEAT_SCHEDULE = {}
 
 if DIGEST_NOTIFICATIONS_ENABLED:
@@ -295,6 +321,13 @@ if DIGEST_NOTIFICATIONS_ENABLED:
         ),
     }
 
+if GMAIL_POLLING_ENABLED:
+    CELERY_BEAT_SCHEDULE["sync-gmail-sources"] = {
+        "task": "apps.integrations.tasks.sync_gmail_sources_task",
+        "schedule": crontab(
+            minute=GMAIL_POLLING_BEAT_MINUTE,
+        ),
+    }
 
 # ==============================================================================
 # Security / Encryption

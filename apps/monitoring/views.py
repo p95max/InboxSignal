@@ -590,6 +590,23 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
     profiles = (
         MonitoringProfile.objects.filter(owner=request.user)
         .annotate(
+            gmail_sources_count=Count(
+                "connected_sources",
+                filter=Q(
+                    connected_sources__source_type=ConnectedSource.SourceType.GMAIL,
+                    connected_sources__is_deleted=False,
+                ),
+                distinct=True,
+            ),
+            active_gmail_sources_count=Count(
+                "connected_sources",
+                filter=Q(
+                    connected_sources__source_type=ConnectedSource.SourceType.GMAIL,
+                    connected_sources__status=ConnectedSource.Status.ACTIVE,
+                    connected_sources__is_deleted=False,
+                ),
+                distinct=True,
+            ),
             events_total=Count("events", distinct=True),
             open_events_count=Count(
                 "events",
@@ -643,7 +660,15 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
                     is_deleted=False,
                 ).order_by("name"),
                 to_attr="telegram_bot_sources",
-            )
+            ),
+            Prefetch(
+                "connected_sources",
+                queryset=ConnectedSource.objects.filter(
+                    source_type=ConnectedSource.SourceType.GMAIL,
+                    is_deleted=False,
+                ).order_by("name"),
+                to_attr="gmail_sources",
+            ),
         )
         .order_by("-last_event_at", "-updated_at")
     )

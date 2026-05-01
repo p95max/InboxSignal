@@ -14,6 +14,7 @@ class ConnectedSource(models.Model):
     class SourceType(models.TextChoices):
         TELEGRAM_BOT = "telegram_bot", _("Telegram bot")
         TELEGRAM_ACCOUNT = "telegram_account", _("Telegram account")
+        GMAIL = "gmail", _("Gmail")
         WHATSAPP = "whatsapp", _("WhatsApp")
         WEBHOOK = "webhook", _("Webhook")
         OTHER = "other", _("Other")

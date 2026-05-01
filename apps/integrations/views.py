@@ -2,10 +2,20 @@ import json
 import logging
 import secrets
 
+from urllib.parse import urlencode
+
+import httpx
+from django.contrib import messages
+from django.core import signing
+from django.shortcuts import redirect
+from django.urls import reverse
+from django.views.decorators.http import require_GET
+from allauth.account.decorators import verified_email_required
+
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from dataclasses import dataclass
 from django.db.models import Q
 from django.utils import timezone
@@ -265,3 +275,294 @@ def get_telegram_source_by_webhook_secret(
         )
 
     return None
+
+
+GOOGLE_OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GMAIL_PROFILE_URL = "https://gmail.googleapis.com/gmail/v1/users/me/profile"
+
+GMAIL_OAUTH_STATE_SALT = "gmail-oauth-connect"
+GMAIL_OAUTH_STATE_MAX_AGE_SECONDS = 10 * 60
+
+
+@verified_email_required
+@require_GET
+def gmail_connect_view(request: HttpRequest):
+    """Start Gmail OAuth connection for an existing monitoring profile."""
+
+    profile_id = request.GET.get("profile_id")
+
+    if not profile_id:
+        messages.error(request, "Missing profile_id for Gmail connection.")
+        return redirect("dashboard")
+
+    profile = (
+        request.user.monitoring_profiles
+        .filter(id=profile_id)
+        .first()
+    )
+
+    if profile is None:
+        messages.error(request, "Monitoring profile was not found.")
+        return redirect("dashboard")
+
+    if not settings.GOOGLE_OAUTH_CLIENT_ID or not settings.GOOGLE_OAUTH_CLIENT_SECRET:
+        messages.error(request, "Google OAuth credentials are not configured.")
+        return redirect("dashboard")
+
+    redirect_uri = request.build_absolute_uri(
+        reverse("integrations:gmail_oauth_callback")
+    )
+
+    state = signing.dumps(
+        {
+            "user_id": request.user.id,
+            "profile_id": profile.id,
+        },
+        salt=GMAIL_OAUTH_STATE_SALT,
+    )
+
+    params = {
+        "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": " ".join(settings.GMAIL_OAUTH_SCOPES),
+        "access_type": "offline",
+        "prompt": "consent",
+        "include_granted_scopes": "true",
+        "state": state,
+    }
+
+    return redirect(f"{GOOGLE_OAUTH_AUTHORIZE_URL}?{urlencode(params)}")
+
+
+@verified_email_required
+@require_GET
+def gmail_oauth_callback_view(request: HttpRequest):
+    """Handle Gmail OAuth callback and create/update Gmail ConnectedSource."""
+
+    error = request.GET.get("error")
+
+    if error:
+        messages.error(request, f"Gmail connection failed: {error}")
+        return redirect("dashboard")
+
+    code = request.GET.get("code")
+    raw_state = request.GET.get("state")
+
+    if not code or not raw_state:
+        messages.error(request, "Gmail OAuth callback is missing code or state.")
+        return redirect("dashboard")
+
+    try:
+        state = signing.loads(
+            raw_state,
+            salt=GMAIL_OAUTH_STATE_SALT,
+            max_age=GMAIL_OAUTH_STATE_MAX_AGE_SECONDS,
+        )
+    except signing.BadSignature:
+        messages.error(request, "Gmail OAuth state is invalid or expired.")
+        return redirect("dashboard")
+
+    if int(state.get("user_id", 0)) != request.user.id:
+        messages.error(request, "Gmail OAuth state does not match current user.")
+        return redirect("dashboard")
+
+    profile = (
+        request.user.monitoring_profiles
+        .filter(id=state.get("profile_id"))
+        .first()
+    )
+
+    if profile is None:
+        messages.error(request, "Monitoring profile was not found.")
+        return redirect("dashboard")
+
+    redirect_uri = request.build_absolute_uri(
+        reverse("integrations:gmail_oauth_callback")
+    )
+
+    try:
+        token_payload = exchange_gmail_oauth_code(
+            code=code,
+            redirect_uri=redirect_uri,
+        )
+        gmail_profile = fetch_gmail_profile(
+            access_token=token_payload["access_token"],
+        )
+    except Exception as exc:
+        messages.error(request, f"Gmail connection failed: {exc}")
+        return redirect("dashboard")
+
+    gmail_address = str(gmail_profile.get("emailAddress", "")).strip().lower()
+
+    if not gmail_address:
+        messages.error(request, "Gmail API did not return email address.")
+        return redirect("dashboard")
+
+    source = upsert_gmail_connected_source(
+        owner=request.user,
+        profile=profile,
+        gmail_address=gmail_address,
+        token_payload=token_payload,
+    )
+
+    messages.success(
+        request,
+        f"Gmail connected: {gmail_address}. Source #{source.id} is active.",
+    )
+
+    return redirect("dashboard")
+
+
+def exchange_gmail_oauth_code(
+    *,
+    code: str,
+    redirect_uri: str,
+) -> dict:
+    """Exchange OAuth authorization code for Gmail tokens."""
+
+    payload = {
+        "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
+        "client_secret": settings.GOOGLE_OAUTH_CLIENT_SECRET,
+        "code": code,
+        "grant_type": "authorization_code",
+        "redirect_uri": redirect_uri,
+    }
+
+    try:
+        response = httpx.post(
+            GOOGLE_OAUTH_TOKEN_URL,
+            data=payload,
+            timeout=15.0,
+        )
+        response_data = response.json()
+    except httpx.HTTPError as exc:
+        raise RuntimeError(f"Google token request failed: {exc}") from exc
+    except ValueError as exc:
+        raise RuntimeError("Google token endpoint returned non-JSON response.") from exc
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"Google token endpoint error: {response_data}")
+
+    access_token = response_data.get("access_token")
+
+    if not access_token:
+        raise RuntimeError("Google token endpoint did not return access_token.")
+
+    return response_data
+
+
+def fetch_gmail_profile(
+    *,
+    access_token: str,
+) -> dict:
+    """Fetch Gmail profile using access token."""
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json",
+    }
+
+    try:
+        response = httpx.get(
+            GMAIL_PROFILE_URL,
+            headers=headers,
+            timeout=15.0,
+        )
+        response_data = response.json()
+    except httpx.HTTPError as exc:
+        raise RuntimeError(f"Gmail profile request failed: {exc}") from exc
+    except ValueError as exc:
+        raise RuntimeError("Gmail profile endpoint returned non-JSON response.") from exc
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"Gmail profile endpoint error: {response_data}")
+
+    return response_data
+
+
+def upsert_gmail_connected_source(
+    *,
+    owner,
+    profile,
+    gmail_address: str,
+    token_payload: dict,
+) -> ConnectedSource:
+    """Create or update Gmail ConnectedSource for one profile."""
+
+    source, _ = ConnectedSource.objects.get_or_create(
+        profile=profile,
+        source_type=ConnectedSource.SourceType.GMAIL,
+        external_id=gmail_address,
+        is_deleted=False,
+        defaults={
+            "owner": owner,
+            "status": ConnectedSource.Status.ACTIVE,
+            "name": f"{profile.name} Gmail",
+            "external_username": gmail_address,
+            "metadata": {
+                "gmail_address": gmail_address,
+                "sync_mode": "polling",
+                "label_filter": "INBOX",
+            },
+        },
+    )
+
+    credentials = build_gmail_credentials_payload(
+        source=source,
+        token_payload=token_payload,
+    )
+
+    source.owner = owner
+    source.profile = profile
+    source.status = ConnectedSource.Status.ACTIVE
+    source.name = f"{profile.name} Gmail"
+    source.external_username = gmail_address
+
+    metadata = source.metadata or {}
+    metadata["gmail_address"] = gmail_address
+    metadata.setdefault("sync_mode", "polling")
+    metadata.setdefault("label_filter", "INBOX")
+    source.metadata = metadata
+
+    source.set_credentials(json.dumps(credentials, ensure_ascii=False, sort_keys=True))
+    source.full_clean()
+    source.save()
+
+    return source
+
+
+def build_gmail_credentials_payload(
+    *,
+    source: ConnectedSource,
+    token_payload: dict,
+) -> dict:
+    """Build encrypted Gmail credentials payload.
+
+    If Google does not return refresh_token on reconnect, keep the previous one.
+    """
+
+    previous_credentials = {}
+
+    if source.credentials_encrypted:
+        try:
+            previous_credentials = json.loads(source.get_credentials())
+        except Exception:
+            previous_credentials = {}
+
+    refresh_token = (
+        token_payload.get("refresh_token")
+        or previous_credentials.get("refresh_token")
+        or ""
+    )
+
+    return {
+        "access_token": token_payload.get("access_token", ""),
+        "refresh_token": refresh_token,
+        "token_uri": GOOGLE_OAUTH_TOKEN_URL,
+        "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
+        "client_secret": settings.GOOGLE_OAUTH_CLIENT_SECRET,
+        "scopes": settings.GMAIL_OAUTH_SCOPES,
+        "expires_in": token_payload.get("expires_in"),
+    }

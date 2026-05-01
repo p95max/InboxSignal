@@ -124,6 +124,7 @@ class ExternalContact(models.Model):
 
     class Channel(models.TextChoices):
         TELEGRAM = "telegram", _("Telegram")
+        EMAIL = "email", _("Email")
         WHATSAPP = "whatsapp", _("WhatsApp")
         OTHER = "other", _("Other")
 
@@ -221,6 +222,7 @@ class IncomingMessage(models.Model):
 
     class Channel(models.TextChoices):
         TELEGRAM = "telegram", _("Telegram")
+        EMAIL = "email", _("Email")
         WHATSAPP = "whatsapp", _("WhatsApp")
         OTHER = "other", _("Other")
 
