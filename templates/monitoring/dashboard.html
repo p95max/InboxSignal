@@ -22,7 +22,7 @@
 
 </div>
 
-<section class="grid grid-4">
+<section class="grid grid-5">
     <div class="card">
         <div class="stat-value">{{ stats.today_total }}</div>
         <div class="stat-label">Today total</div>
@@ -89,50 +89,28 @@
 
                                     {% if profile.telegram_bot_sources %}
                                         {% for source in profile.telegram_bot_sources %}
-                                            <span class="badge {% if source.status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
-                                                Adapter: Telegram bot
-                                            </span>
+                                            {% if not source.metadata.alert_chat_id and source.metadata.alert_setup_token %}
+                                                <div class="profile-card-section">
+                                                    <div class="profile-card-section-label">Telegram alert setup</div>
 
-                                            {% if source.external_username %}
-                                                <span class="badge badge-muted">
-                                                    @{{ source.external_username }}
-                                                </span>
-                                            {% endif %}
+                                                    <div class="alert-setup-box">
+                                                        <p class="muted">
+                                                            Send this command in the Telegram chat where internal alerts should be delivered:
+                                                        </p>
 
-                                            {% if source.metadata.alert_chat_id %}
-                                                <span class="badge badge-success">
-                                                    Alerts: enabled
-                                                </span>
-                                            {% else %}
-                                                <span class="badge badge-warning">
-                                                    Alerts: not enabled
-                                                </span>
+                                                        <code class="setup-command">/start_alerts {{ source.metadata.alert_setup_token }}</code>
+                                                    </div>
+                                                </div>
                                             {% endif %}
                                         {% endfor %}
                                     {% elif profile.gmail_sources %}
-                                        {% for source in profile.gmail_sources %}
-                                            <span class="badge {% if source.status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
-                                                Adapter: Gmail
-                                            </span>
+                                        <div class="profile-card-section">
+                                            <div class="profile-card-section-label">Alert delivery</div>
 
-                                            <span class="badge badge-muted">
-                                                {{ source.metadata.gmail_address|default:source.external_username }}
-                                            </span>
-
-                                            {% if source.status == "active" %}
-                                                <span class="badge badge-success">
-                                                    Gmail connected
-                                                </span>
-                                            {% else %}
-                                                <span class="badge badge-warning">
-                                                    Gmail connection pending
-                                                </span>
-                                            {% endif %}
-                                        {% endfor %}
-                                    {% else %}
-                                        <span class="badge badge-muted">
-                                            No adapter connected
-                                        </span>
+                                            <p class="muted">
+                                                Gmail events are delivered through your configured Telegram alert destination.
+                                            </p>
+                                        </div>
                                     {% endif %}
 
                                 </div>
@@ -229,6 +207,26 @@
                         <a class="button" href="{% url 'monitoring:profile_update' profile.id %}">
                             Edit
                         </a>
+
+                        {% if profile.gmail_sources %}
+                            {% for source in profile.gmail_sources %}
+                                {% if source.status != "active" %}
+                                    <a
+                                        class="button"
+                                        href="{% url 'integrations:gmail_connect' %}?profile_id={{ profile.id }}"
+                                    >
+                                        Reconnect Gmail
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+                        {% elif not profile.telegram_bot_sources %}
+                            <a
+                                class="button"
+                                href="{% url 'integrations:gmail_connect' %}?profile_id={{ profile.id }}"
+                            >
+                                Connect Gmail
+                            </a>
+                        {% endif %}
 
                         <form
                             method="post"
