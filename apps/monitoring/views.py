@@ -650,23 +650,6 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
     profiles = (
         MonitoringProfile.objects.filter(owner=request.user)
         .annotate(
-            gmail_sources_count=Count(
-                "connected_sources",
-                filter=Q(
-                    connected_sources__source_type=ConnectedSource.SourceType.GMAIL,
-                    connected_sources__is_deleted=False,
-                ),
-                distinct=True,
-            ),
-            active_gmail_sources_count=Count(
-                "connected_sources",
-                filter=Q(
-                    connected_sources__source_type=ConnectedSource.SourceType.GMAIL,
-                    connected_sources__status=ConnectedSource.Status.ACTIVE,
-                    connected_sources__is_deleted=False,
-                ),
-                distinct=True,
-            ),
             events_total=Count("events", distinct=True),
             open_events_count=Count(
                 "events",
@@ -676,16 +659,16 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
             urgent_open_events_count=Count(
                 "events",
                 filter=Q(
-                    events__priority=Event.Priority.URGENT,
                     events__status=Event.Status.NEW,
+                    events__priority=Event.Priority.URGENT,
                 ),
                 distinct=True,
             ),
             important_open_events_count=Count(
                 "events",
                 filter=Q(
-                    events__priority=Event.Priority.IMPORTANT,
                     events__status=Event.Status.NEW,
+                    events__priority=Event.Priority.IMPORTANT,
                 ),
                 distinct=True,
             ),
@@ -747,7 +730,7 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
                 to_attr="gmail_sources",
             ),
         )
-        .order_by("-last_event_at", "-updated_at")
+        .order_by("-updated_at")
     )
 
     profiles = list(profiles)

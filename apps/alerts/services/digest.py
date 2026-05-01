@@ -145,7 +145,10 @@ def create_digest_deliveries_for_period(
 
     results = []
 
-    for source in iter_digest_sources():
+    for context in iter_digest_sources():
+        profile = context.profile
+        source = context.telegram_source
+
         recipient = get_digest_recipient(source)
 
         if not recipient:
@@ -153,6 +156,7 @@ def create_digest_deliveries_for_period(
 
         result = create_digest_delivery_for_source(
             source=source,
+            profile=profile,
             recipient=recipient,
             period=period,
         )
