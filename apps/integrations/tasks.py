@@ -19,6 +19,7 @@ def sync_gmail_sources_task(self) -> int:
         },
     )
 
+
     synced_count = sync_all_gmail_sources()
 
     logger.info(
