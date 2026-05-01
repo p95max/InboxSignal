@@ -7,6 +7,8 @@ InboxSignal is a Django-based backend and web UI for ingesting external messages
 Current MVP focus:
 
 - **Telegram Bot API** as the primary ingestion channel
+- **Gmail API** as a read-only email ingestion adapter
+- **Google OAuth 2.0** for Gmail account connection
 - **Django** for web UI, admin, onboarding, profile configuration, and internal API
 - **PostgreSQL** as the source of truth
 - **Redis** for Celery, cache, rate limiting, cooldowns, locks, and usage counters
@@ -21,32 +23,81 @@ The system is not a chat client. It is a **message triage pipeline** that turns 
 
 ## 2. Current architecture
 
+**Telegram Bot API**
+
 ```text
 Telegram Bot API
     │
-    ├─ webhook endpoint                 production / public HTTPS
-    └─ polling management command        local development fallback
+    ├─ webhook endpoint                  production / public HTTPS
+    └─ polling management command         local development fallback
             │
             ▼
-ConnectedSource
+ConnectedSource(source_type=telegram_bot)
             │
             ▼
-IncomingMessage ingestion
+IncomingMessage(channel=telegram)
             │
             ▼
+Shared processing pipeline
+```
+
+**Gmail API**
+
+```text
+Gmail API
+    │
+    └─ Celery Beat polling                MVP implementation
+            │
+            ▼
+ConnectedSource(source_type=gmail)
+            │
+            ▼
+IncomingMessage(channel=email)
+            │
+            ▼
+Shared processing pipeline
+```
+
+**Shared processing pipeline**
+
+```text
+IncomingMessage
+    │
+    ▼
 Celery task: process_incoming_message_task
+    │
+    ├─ rules-based analysis
+    ├─ optional AI analysis
+    ├─ Event creation
+    └─ instant AlertDelivery creation
             │
-            ├─ rules-based analysis
-            ├─ optional AI analysis
-            ├─ Event creation
-            └─ instant AlertDelivery creation
-                        │
-                        ▼
+            ▼
 Celery task: send_alert_delivery_task
-                        │
-                        ▼
+            │
+            ▼
 Telegram alert chat
 ```
+
+**Scheduled digest flow**
+
+```text
+Celery Beat
+    │
+    ▼
+build_and_enqueue_digest_notifications_task
+    │
+    ├─ find active profiles with digest enabled
+    ├─ resolve Telegram alert destination for the profile owner
+    ├─ check whether profile digest interval is due
+    ├─ aggregate NEW important/urgent events for completed period
+    ├─ create AlertDelivery(delivery_type=digest) idempotently
+    └─ enqueue send_alert_delivery_task
+            │
+            ▼
+Telegram digest message
+```
+
+> **Key architectural boundary:** ingestion sources and alert destinations are separate concepts — Gmail can be the incoming source while Telegram remains the internal alert delivery channel.
 
 Scheduled digest flow:
 
@@ -65,6 +116,191 @@ build_and_enqueue_digest_notifications_task
             ▼
 Telegram digest message
 ```
+
+## 3. Adapter contract
+
+All external communication adapters must normalize provider-specific payloads into `IncomingMessage`.
+
+Required normalized fields:
+
+```text
+profile
+source
+channel
+external_source_id
+external_chat_id
+external_message_id
+sender_id
+sender_username
+sender_display_name
+text
+raw_payload
+received_at
+```
+
+Deduplication is handled at the ingestion layer through a deterministic dedup key.
+
+**For Gmail:**
+
+```text
+channel = email
+external_source_id = Gmail address
+external_chat_id = Gmail thread id
+external_message_id = Gmail message id
+sender_id = sender email
+sender_username = sender email
+sender_display_name = parsed sender display name
+text = Subject + From + plain text body
+```
+
+**For Telegram:**
+
+```text
+channel = telegram
+external_source_id = Telegram bot/source id
+external_chat_id = Telegram chat id
+external_message_id = Telegram message id
+sender_id = Telegram user/chat id
+sender_username = Telegram username
+sender_display_name = Telegram display name
+text = Telegram text or caption
+```
+
+After `IncomingMessage` creation, Telegram and Gmail use the same rules-first and optional AI processing pipeline.
+
+---
+
+## 2.4. Gmail OAuth and token storage
+
+Gmail uses Google OAuth 2.0 with the minimum read-only scope:
+
+```text
+https://www.googleapis.com/auth/gmail.readonly
+```
+
+Encrypted credentials are stored in `ConnectedSource.credentials_encrypted` as JSON:
+
+```json
+{
+  "access_token": "...",
+  "refresh_token": "...",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "client_id": "...",
+  "client_secret": "...",
+  "scopes": ["https://www.googleapis.com/auth/gmail.readonly"]
+}
+```
+
+Non-sensitive sync state is stored in `ConnectedSource.metadata`:
+
+```json
+{
+  "gmail_address": "user@example.com",
+  "sync_mode": "polling",
+  "label_filter": "INBOX",
+  "last_sync_at": "2026-05-01T22:19:46+02:00"
+}
+```
+
+Rules:
+
+- Refresh tokens must never be stored in `metadata`
+- Gmail OAuth failures must not activate a Gmail profile
+- Cancelled or incomplete OAuth flows leave the Gmail profile disabled or the Gmail source in `error`/`pending` state
+- Reconnecting Gmail should reuse an existing pending Gmail source when possible
+
+## 2.5 Gmail polling
+
+The MVP intentionally uses polling instead of Google Pub/Sub push notifications.
+
+Reasoning:
+
+- easier local development
+- no public push endpoint required
+- no Google Pub/Sub setup required
+- easier to explain and test
+- enough for MVP-grade message monitoring
+
+Runtime flow:
+
+```text
+Celery Beat
+    │
+    ▼
+sync_gmail_sources_task
+    │
+    ▼
+sync_all_gmail_sources()
+    │
+    ▼
+sync_gmail_source(source)
+    │
+    ├─ refresh/access Gmail token if needed
+    ├─ Gmail users.messages.list
+    ├─ Gmail users.messages.get
+    ├─ parse subject/from/date/plain text body
+    ├─ ingest_incoming_message(...)
+    └─ enqueue message processing
+```
+
+Current MVP limits:
+```
+GMAIL_MAX_MESSAGES_PER_SYNC=20
+GMAIL_MAX_BODY_CHARS=8000
+```
+
+## 2.6 Alert delivery model
+
+Incoming source and alert delivery source are intentionally separated.
+
+Examples:
+
+```text
+### Telegram profile:
+Incoming source = Telegram bot
+Alert destination = same Telegram bot alert chat
+
+### Gmail profile:
+Incoming source = Gmail account
+Alert destination = account-level Telegram alert chat
+```
+For Gmail-created events, AlertDelivery(channel=telegram) stores the selected Telegram source id in the payload:
+```json
+{
+  "telegram_source_id": 2
+}
+```
+
+> The Telegram delivery task uses this source id to load the correct Telegram bot token. It must not use the Gmail source credentials for Telegram delivery.
+
+
+---
+
+## 2.7 Known limitations
+
+Gmail MVP limitations:
+
+- polling fetches recent messages and relies on deduplication
+- no Gmail history id incremental sync yet
+- no Google Pub/Sub push notifications yet
+- no email sending or replies
+- no label modification
+- no attachment processing
+- no full HTML rendering
+- basic plain text extraction only
+- email-specific noise filtering is minimal
+- newsletters and promotional emails can still produce low-value events
+
+Future improvements:
+
+- Gmail history-based incremental sync
+- Pub/Sub push notification support
+- email signature and quoted-reply trimming
+- newsletter/promotions suppression
+- per-profile Gmail search query configuration
+- source-level sync health metrics
+
+---
 
 ### Runtime services
 

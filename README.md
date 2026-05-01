@@ -2,7 +2,7 @@
 
 > Technical documentation: [`docs/technical-readme.md`](docs/technical-readme.md)
 
-AI-powered Django service for monitoring Telegram communication streams, converting raw messages into structured events, prioritizing what matters, and delivering internal alerts and digests.
+AI-powered Django service for monitoring Telegram and Gmail communication streams, converting raw messages into structured events, prioritizing what matters, and delivering internal alerts and digests.
 
 ## What the project does
 
@@ -11,7 +11,8 @@ InboxSignal is built for one operational job: reduce message noise and surface o
 Current MVP flow:
 
 ```text
-Telegram -> Ingestion -> Rules -> Optional AI -> Event -> AlertDelivery -> Telegram alert/digest
+Telegram Bot -> Ingestion -> Rules -> Optional AI -> Event -> AlertDelivery -> Telegram alert/digest
+Gmail        -> Ingestion -> Rules -> Optional AI -> Event -> AlertDelivery -> Telegram alert/digest
 ```
 
 The system is **not** a chat client and **not** a CRM. It is a message triage backend with a web UI for onboarding, profile configuration, event review, alert setup, digest configuration, and minimal operational visibility.
@@ -34,6 +35,11 @@ The system is **not** a chat client and **not** a CRM. It is a message triage ba
   - `urgent_*` rules: negative messages, deadlines, repeated follow-ups
   - `extract_*` fields: name, contact, budget, product/service, date/time
 - Telegram Bot integration
+- Gmail read-only integration via Google OAuth
+- separate Telegram and Gmail monitoring profile creation flows
+- Gmail polling via Celery Beat
+- Gmail email normalization into `IncomingMessage(channel=email)`
+- shared rules-first and optional AI analysis for Telegram and Gmail messages
 - webhook-based ingestion with `X-Telegram-Bot-Api-Secret-Token` validation
 - polling mode for local development
 - protected Telegram bot system commands:
@@ -44,6 +50,7 @@ The system is **not** a chat client and **not** a CRM. It is a message triage ba
 - rules-first message analysis with optional AI enrichment
 - event creation with priority scoring
 - instant Telegram alert delivery
+- Telegram alert delivery for events created from both Telegram and Gmail sources
 - digest notifications for new important/urgent events
 - per-profile digest frequency: every 1, 3, 6, 12, or 24 hours
 - Celery worker for async processing and alert delivery
@@ -66,6 +73,8 @@ The system is **not** a chat client and **not** a CRM. It is a message triage ba
 - django-allauth
 - OpenAI API
 - Telegram Bot API
+- Gmail API
+- Google OAuth 2.0
 - Docker Compose v2
 
 ## Core domain objects
@@ -217,6 +226,80 @@ docker compose run --rm -e RUN_MIGRATIONS=0 web python manage.py telegram_webhoo
   --drop-pending-updates
 ```
 
+## Gmail integration
+
+Gmail is implemented as a **read-only ingestion adapter**, not as an email client.
+
+MVP scope:
+
+- connect a Gmail account through Google OAuth
+- request only the read-only Gmail scope
+- read recent INBOX messages
+- parse subject, sender, received date, and plain text body
+- normalize emails into `IncomingMessage(channel=email)`
+- reuse the existing rules-first and optional AI analysis pipeline
+- create `Event` records from important or urgent emails
+- deliver internal alerts and digests through the configured Telegram alert destination
+
+Out of scope:
+
+- sending emails
+- replying from the system
+- deleting emails
+- changing Gmail labels
+- rendering full HTML emails
+- processing attachments
+- building a full inbox UI
+
+OAuth scope:
+
+```text
+https://www.googleapis.com/auth/gmail.readonly
+```
+Gmail credentials are stored in ConnectedSource.credentials_encrypted.
+
+Only non-sensitive sync state is stored in ConnectedSource.metadata, for example:
+```text
+{
+  "gmail_address": "user@example.com",
+  "sync_mode": "polling",
+  "label_filter": "INBOX",
+  "last_sync_at": "2026-05-01T22:19:46+02:00"
+}
+```
+
+#### .env.example
+```text
+# ==============================================================================
+# Gmail integration
+# ==============================================================================
+
+GMAIL_POLLING_ENABLED=True
+GMAIL_POLLING_BEAT_MINUTE=*/5
+GMAIL_MAX_MESSAGES_PER_SYNC=20
+GMAIL_MAX_BODY_CHARS=8000
+GMAIL_OAUTH_SCOPES=https://www.googleapis.com/auth/gmail.readonly
+```
+
+### Gmail polling
+
+Gmail sync is handled by Celery Beat.
+
+celery_beat -> sync_gmail_sources_task -> Gmail API -> IncomingMessage -> process_incoming_message_task
+
+### Google OAuth redirect URI
+
+For local development, the Google OAuth client must include this authorized redirect URI:
+```text
+http://localhost:8000/integrations/gmail/oauth/callback/
+```
+
+If the application is opened through 127.0.0.1, add this URI as well:
+```text
+http://127.0.0.1:8000/integrations/gmail/oauth/callback/
+```
+---
+
 ## Telegram bot commands
 
 ### `/start`
@@ -243,6 +326,7 @@ Rules:
 ## Digest notifications
 
 Digest notifications are profile-level grouped summaries for `NEW` events with priority `important` or `urgent`.
+Digest delivery uses Telegram as the internal notification channel. Gmail profiles can also produce digest entries, but the digest message is sent through the configured Telegram alert destination.
 
 Supported intervals:
 
@@ -291,6 +375,10 @@ Current important protections include:
 - alert cooldown support
 - idempotent alert and digest creation
 - write-only admin fields for sensitive Telegram secrets
+- Gmail OAuth uses the minimum read-only scope
+- Gmail refresh tokens are stored only in encrypted credentials
+- Gmail metadata stores only non-sensitive sync state
+- failed or cancelled Gmail OAuth connections do not activate a Gmail profile
 
 ## Ops visibility
 
@@ -370,6 +458,14 @@ Implemented end-to-end:
 - manual Telegram digest command
 - event review / ignore / escalate / archive workflow
 - minimal ops visibility
+- separate Gmail monitoring profile creation flow
+- Gmail OAuth connection flow
+- encrypted Gmail token storage
+- Gmail polling ingestion
+- Gmail email parsing and normalization
+- Gmail messages converted into `IncomingMessage(channel=email)`
+- shared rules-first and optional AI processing for Gmail events
+- Telegram alert delivery for Gmail-created events
 
 Natural next steps:
 
@@ -377,8 +473,14 @@ Natural next steps:
 - structured log shipping / external metrics
 - richer analytics dashboard
 - replay/reprocess tooling
+- Gmail sync optimization with history IDs or Pub/Sub push notifications
+- email-specific noise filters for newsletters/promotions/signatures
 - more delivery channels such as email or webhook
 - WhatsApp or additional channel adapters
+- Gmail OAuth uses the minimum read-only scope
+- Gmail refresh tokens are stored only in encrypted credentials
+- Gmail metadata stores only non-sensitive sync state
+- failed or cancelled Gmail OAuth connections do not activate a Gmail profile
 
 ## Contacts
 
