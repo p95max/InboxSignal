@@ -343,6 +343,23 @@ def gmail_connect_view(request: HttpRequest):
         "state": state,
     }
 
+    ConnectedSource.objects.get_or_create(
+        profile=profile,
+        source_type=ConnectedSource.SourceType.GMAIL,
+        external_id="",
+        is_deleted=False,
+        defaults={
+            "owner": request.user,
+            "status": ConnectedSource.Status.PENDING,
+            "name": f"{profile.name} Gmail",
+            "metadata": {
+                "sync_mode": "polling",
+                "label_filter": "INBOX",
+                "oauth_started_at": timezone.now().isoformat(),
+            },
+        },
+    )
+
     return redirect(f"{GOOGLE_OAUTH_AUTHORIZE_URL}?{urlencode(params)}")
 
 
@@ -352,16 +369,47 @@ def gmail_oauth_callback_view(request: HttpRequest):
     """Handle Gmail OAuth callback and activate a Gmail monitoring profile."""
 
     error = request.GET.get("error")
+    raw_state = request.GET.get("state")
 
     if error:
-        messages.error(request, f"Gmail connection failed: {error}")
+        profile_id = extract_profile_id_from_gmail_oauth_state(
+            raw_state=raw_state,
+            user=request.user,
+        )
+
+        mark_gmail_profile_connection_failed(
+            profile_id=profile_id,
+            user=request.user,
+            reason=f"Google OAuth error: {error}",
+        )
+
+        messages.error(
+            request,
+            "Gmail connection was cancelled or rejected by Google. "
+            "The Gmail profile was disabled.",
+        )
         return redirect("dashboard")
 
     code = request.GET.get("code")
     raw_state = request.GET.get("state")
 
     if not code or not raw_state:
-        messages.error(request, "Gmail OAuth callback is missing code or state.")
+        profile_id = extract_profile_id_from_gmail_oauth_state(
+            raw_state=raw_state,
+            user=request.user,
+        )
+
+        mark_gmail_profile_connection_failed(
+            profile_id=profile_id,
+            user=request.user,
+            reason="Gmail OAuth callback is missing code or state.",
+        )
+
+        messages.error(
+            request,
+            "Gmail connection did not complete. "
+            "The Gmail profile was disabled.",
+        )
         return redirect("dashboard")
 
     try:
@@ -371,7 +419,11 @@ def gmail_oauth_callback_view(request: HttpRequest):
             max_age=GMAIL_OAUTH_STATE_MAX_AGE_SECONDS,
         )
     except signing.BadSignature:
-        messages.error(request, "Gmail OAuth state is invalid or expired.")
+        messages.error(
+            request,
+            "Gmail connection expired or returned an invalid state. "
+            "Please create/connect the Gmail profile again.",
+        )
         return redirect("dashboard")
 
     if int(state.get("user_id", 0)) != request.user.id:
@@ -412,13 +464,33 @@ def gmail_oauth_callback_view(request: HttpRequest):
             access_token=token_payload["access_token"],
         )
     except Exception as exc:
-        messages.error(request, f"Gmail connection failed: {exc}")
+        mark_gmail_profile_connection_failed(
+            profile_id=profile.id,
+            user=request.user,
+            reason=str(exc),
+        )
+
+        messages.error(
+            request,
+            "Gmail connection failed during token exchange or profile loading. "
+            "The Gmail profile was disabled.",
+        )
         return redirect("dashboard")
 
     gmail_address = str(gmail_profile.get("emailAddress", "")).strip().lower()
 
     if not gmail_address:
-        messages.error(request, "Gmail API did not return email address.")
+        mark_gmail_profile_connection_failed(
+            profile_id=profile.id,
+            user=request.user,
+            reason="Gmail API did not return email address.",
+        )
+
+        messages.error(
+            request,
+            "Gmail API did not return email address. "
+            "The Gmail profile was disabled.",
+        )
         return redirect("dashboard")
 
     source = upsert_gmail_connected_source(
@@ -515,23 +587,23 @@ def upsert_gmail_connected_source(
 ) -> ConnectedSource:
     """Create or update Gmail ConnectedSource for one Gmail profile."""
 
-    source, _ = ConnectedSource.objects.get_or_create(
-        profile=profile,
-        source_type=ConnectedSource.SourceType.GMAIL,
-        external_id=gmail_address,
-        is_deleted=False,
-        defaults={
-            "owner": owner,
-            "status": ConnectedSource.Status.ACTIVE,
-            "name": f"{profile.name} Gmail",
-            "external_username": gmail_address,
-            "metadata": {
-                "gmail_address": gmail_address,
-                "sync_mode": "polling",
-                "label_filter": "INBOX",
-            },
-        },
+    source = (
+        ConnectedSource.objects.filter(
+            profile=profile,
+            source_type=ConnectedSource.SourceType.GMAIL,
+            is_deleted=False,
+        )
+        .order_by("id")
+        .first()
     )
+
+    if source is None:
+        source = ConnectedSource(
+            profile=profile,
+            source_type=ConnectedSource.SourceType.GMAIL,
+            external_id=gmail_address,
+            owner=owner,
+        )
 
     credentials = build_gmail_credentials_payload(
         source=source,
@@ -542,6 +614,7 @@ def upsert_gmail_connected_source(
     source.profile = profile
     source.status = ConnectedSource.Status.ACTIVE
     source.name = f"{profile.name} Gmail"
+    source.external_id = gmail_address
     source.external_username = gmail_address
 
     metadata = source.metadata or {}
@@ -590,3 +663,69 @@ def build_gmail_credentials_payload(
         "scopes": settings.GMAIL_OAUTH_SCOPES,
         "expires_in": token_payload.get("expires_in"),
     }
+
+
+def mark_gmail_profile_connection_failed(
+    *,
+    profile_id,
+    user,
+    reason: str,
+) -> None:
+    """Disable Gmail profile when OAuth connection did not complete."""
+
+    if not profile_id:
+        return
+
+    profile = (
+        user.monitoring_profiles
+        .filter(id=profile_id)
+        .first()
+    )
+
+    if profile is None:
+        return
+
+    # Do not disable profile if Gmail source is already connected.
+    if profile.connected_sources.filter(
+        source_type=ConnectedSource.SourceType.GMAIL,
+        status=ConnectedSource.Status.ACTIVE,
+        is_deleted=False,
+    ).exists():
+        return
+
+    profile.status = profile.Status.DISABLED
+    profile.save(update_fields=["status", "updated_at"])
+
+    profile.connected_sources.filter(
+        source_type=ConnectedSource.SourceType.GMAIL,
+        is_deleted=False,
+    ).update(
+        status=ConnectedSource.Status.ERROR,
+        last_error_at=timezone.now(),
+        last_error_message=str(reason)[:2000],
+    )
+
+
+def extract_profile_id_from_gmail_oauth_state(
+    *,
+    raw_state: str | None,
+    user,
+):
+    """Return profile id from signed Gmail OAuth state if possible."""
+
+    if not raw_state:
+        return None
+
+    try:
+        state = signing.loads(
+            raw_state,
+            salt=GMAIL_OAUTH_STATE_SALT,
+            max_age=GMAIL_OAUTH_STATE_MAX_AGE_SECONDS,
+        )
+    except signing.BadSignature:
+        return None
+
+    if int(state.get("user_id", 0)) != user.id:
+        return None
+
+    return state.get("profile_id")
