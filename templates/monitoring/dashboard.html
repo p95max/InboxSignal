@@ -10,9 +10,16 @@
         <p>Events that need attention across your monitoring profiles.</p>
     </div>
 
-    <a class="button button-primary" href="{% url 'profile_create' %}">
-        Add monitoring profile
-    </a>
+    <div class="page-actions">
+        <a class="button button-primary" href="{% url 'telegram_profile_create' %}">
+            Add Telegram monitoring
+        </a>
+
+        <a class="button" href="{% url 'gmail_profile_create' %}">
+            Add Gmail monitoring
+        </a>
+    </div>
+
 </div>
 
 <section class="grid grid-4">
@@ -102,11 +109,32 @@
                                                 </span>
                                             {% endif %}
                                         {% endfor %}
+                                    {% elif profile.gmail_sources %}
+                                        {% for source in profile.gmail_sources %}
+                                            <span class="badge {% if source.status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
+                                                Adapter: Gmail
+                                            </span>
+
+                                            <span class="badge badge-muted">
+                                                {{ source.metadata.gmail_address|default:source.external_username }}
+                                            </span>
+
+                                            {% if source.status == "active" %}
+                                                <span class="badge badge-success">
+                                                    Gmail connected
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-warning">
+                                                    Gmail connection pending
+                                                </span>
+                                            {% endif %}
+                                        {% endfor %}
                                     {% else %}
                                         <span class="badge badge-muted">
-                                            Adapter: Telegram bot not connected
+                                            No adapter connected
                                         </span>
                                     {% endif %}
+
                                 </div>
                             </div>
                         </div>
@@ -220,9 +248,15 @@
     {% else %}
         <div class="card empty-state">
             <p>No monitoring profiles yet.</p>
-            <a class="button button-primary" href="{% url 'profile_create' %}">
-                Create first profile
-            </a>
+                <div class="profile-card-actions">
+                    <a class="button button-primary" href="{% url 'telegram_profile_create' %}">
+                        Create Telegram profile
+                    </a>
+
+                    <a class="button" href="{% url 'gmail_profile_create' %}">
+                        Create Gmail profile
+                    </a>
+                </div>
         </div>
     {% endif %}
 </section>

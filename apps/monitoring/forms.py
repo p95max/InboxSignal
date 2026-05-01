@@ -206,7 +206,7 @@ class MonitoringProfileCreateForm(
     MonitoringProfileConstructorMixin,
     forms.ModelForm,
 ):
-    """Create a monitoring profile and connect a Telegram bot source."""
+    """Create a Telegram monitoring profile and connect a Telegram bot source."""
 
     digest_enabled = forms.BooleanField(
         required=False,
@@ -309,6 +309,53 @@ class MonitoringProfileCreateForm(
         source.save()
 
         self.connected_source = source
+
+        return profile
+
+
+class GmailMonitoringProfileCreateForm(
+    MonitoringProfileConstructorMixin,
+    forms.ModelForm,
+):
+    """Create a Gmail monitoring profile before OAuth connection."""
+
+    digest_enabled = forms.BooleanField(
+        required=False,
+        label="Enable digest notifications",
+        initial=False,
+        widget=forms.CheckboxInput(
+            attrs={
+                "data-digest-enabled": "true",
+            }
+        ),
+    )
+
+    class Meta:
+        model = MonitoringProfile
+        fields = PROFILE_CONSTRUCTOR_FIELDS
+        widgets = {
+            "business_context": forms.Textarea(
+                attrs={
+                    "rows": 3,
+                    "maxlength": 300,
+                    "placeholder": "Example: We receive customer requests by email.",
+                }
+            ),
+            "scenario": forms.Select(),
+        }
+
+    @transaction.atomic
+    def save(self, *, owner):
+        profile = super().save(commit=False)
+        profile.owner = owner
+
+        # Disabled until Gmail OAuth succeeds.
+        profile.status = MonitoringProfile.Status.DISABLED
+
+        self.apply_scenario_preset_to_profile(profile)
+
+        profile.full_clean()
+        profile.save()
 
         return profile
 

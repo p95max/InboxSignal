@@ -20,6 +20,7 @@ from apps.alerts.models import AlertDelivery
 from apps.core.services.rate_limits import RateLimitPeriod, check_rate_limit
 from apps.integrations.models import ConnectedSource
 from apps.monitoring.forms import (
+    GmailMonitoringProfileCreateForm,
     MonitoringProfileCreateForm,
     MonitoringProfileUpdateForm,
 )
@@ -72,7 +73,7 @@ def _handle_profile_create_request(
     messages.success(
         request,
         (
-            "Monitoring profile created. "
+            "Telegram monitoring profile created. "
             f"Telegram source #{source.id} is active."
         ),
     )
@@ -113,7 +114,7 @@ def onboarding_view(request: HttpRequest) -> HttpResponse:
 
 @verified_email_required
 def profile_create_view(request: HttpRequest) -> HttpResponse:
-    """Create an additional monitoring profile after onboarding."""
+    """Create an additional Telegram monitoring profile after onboarding.."""
 
     if not _user_has_monitoring_profiles(request.user):
         return redirect("onboarding")
@@ -140,6 +141,65 @@ def profile_create_view(request: HttpRequest) -> HttpResponse:
             "is_onboarding": False,
         },
     )
+
+
+@verified_email_required
+def gmail_profile_create_view(request: HttpRequest) -> HttpResponse:
+    """Create a separate Gmail monitoring profile and start Gmail OAuth."""
+
+    if not _user_has_monitoring_profiles(request.user):
+        return redirect("onboarding")
+
+    if request.method == "POST":
+        form = GmailMonitoringProfileCreateForm(request.POST)
+
+        if form.is_valid():
+            profile_create_limit = check_rate_limit(
+                name="registered-profile-create",
+                actor=request.user.id,
+                limit=settings.REGISTERED_PROFILE_CREATE_LIMIT_PER_DAY,
+                period=RateLimitPeriod.DAY,
+            )
+
+            if not profile_create_limit.allowed:
+                form.add_error(
+                    None,
+                    "Profile creation limit reached. Please try again later.",
+                )
+            else:
+                profile = form.save(owner=request.user)
+
+                messages.info(
+                    request,
+                    "Gmail monitoring profile created. Connect Gmail to activate it.",
+                )
+
+                gmail_connect_url = reverse("integrations:gmail_connect")
+                query = urlencode({"profile_id": profile.id})
+
+                return redirect(f"{gmail_connect_url}?{query}")
+    else:
+        form = GmailMonitoringProfileCreateForm(
+            initial={
+                "name": "Gmail Inbox Monitoring",
+                "scenario": MonitoringProfile.Scenario.GENERAL,
+                "business_context": (
+                    "Analyze incoming customer emails and detect leads, "
+                    "complaints, urgent requests and important follow-ups."
+                ),
+            }
+        )
+
+    return render(
+        request,
+        "monitoring/gmail_profile_create.html",
+        {
+            "form": form,
+            "scenario_presets": get_scenario_presets_for_ui(),
+            "is_onboarding": False,
+        },
+    )
+
 
 @verified_email_required
 @require_POST
@@ -646,6 +706,23 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
                 "connected_sources",
                 filter=Q(
                     connected_sources__source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+                    connected_sources__status=ConnectedSource.Status.ACTIVE,
+                    connected_sources__is_deleted=False,
+                ),
+                distinct=True,
+            ),
+            gmail_sources_count=Count(
+                "connected_sources",
+                filter=Q(
+                    connected_sources__source_type=ConnectedSource.SourceType.GMAIL,
+                    connected_sources__is_deleted=False,
+                ),
+                distinct=True,
+            ),
+            active_gmail_sources_count=Count(
+                "connected_sources",
+                filter=Q(
+                    connected_sources__source_type=ConnectedSource.SourceType.GMAIL,
                     connected_sources__status=ConnectedSource.Status.ACTIVE,
                     connected_sources__is_deleted=False,
                 ),

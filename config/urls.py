@@ -14,6 +14,7 @@ from apps.monitoring.views import (
     profile_create_view,
     profile_delete_view,
     profile_detail_view,
+    gmail_profile_create_view,
 )
 
 urlpatterns = [
@@ -34,6 +35,16 @@ urlpatterns = [
     ),
     path("onboarding/", onboarding_view, name="onboarding"),
     path("profiles/create/", profile_create_view, name="profile_create"),
+    path(
+        "profiles/create/telegram/",
+        profile_create_view,
+        name="telegram_profile_create",
+    ),
+    path(
+        "profiles/create/gmail/",
+        gmail_profile_create_view,
+        name="gmail_profile_create",
+    ),
     path("events/<uuid:event_id>/<str:action>/", event_action_view, name="event_action"),
 
     # Backward-compatible short names used by existing templates.

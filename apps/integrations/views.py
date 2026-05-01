@@ -9,7 +9,6 @@ from django.contrib import messages
 from django.core import signing
 from django.shortcuts import redirect
 from django.urls import reverse
-from django.views.decorators.http import require_GET
 from allauth.account.decorators import verified_email_required
 
 from django.conf import settings
@@ -288,7 +287,7 @@ GMAIL_OAUTH_STATE_MAX_AGE_SECONDS = 10 * 60
 @verified_email_required
 @require_GET
 def gmail_connect_view(request: HttpRequest):
-    """Start Gmail OAuth connection for an existing monitoring profile."""
+    """Start Gmail OAuth connection for a separate Gmail monitoring profile."""
 
     profile_id = request.GET.get("profile_id")
 
@@ -304,6 +303,17 @@ def gmail_connect_view(request: HttpRequest):
 
     if profile is None:
         messages.error(request, "Monitoring profile was not found.")
+        return redirect("dashboard")
+
+    if profile.connected_sources.filter(
+        is_deleted=False,
+    ).exclude(
+        source_type=ConnectedSource.SourceType.GMAIL,
+    ).exists():
+        messages.error(
+            request,
+            "Gmail must be connected to a separate Gmail monitoring profile.",
+        )
         return redirect("dashboard")
 
     if not settings.GOOGLE_OAUTH_CLIENT_ID or not settings.GOOGLE_OAUTH_CLIENT_SECRET:
@@ -339,7 +349,7 @@ def gmail_connect_view(request: HttpRequest):
 @verified_email_required
 @require_GET
 def gmail_oauth_callback_view(request: HttpRequest):
-    """Handle Gmail OAuth callback and create/update Gmail ConnectedSource."""
+    """Handle Gmail OAuth callback and activate a Gmail monitoring profile."""
 
     error = request.GET.get("error")
 
@@ -378,6 +388,17 @@ def gmail_oauth_callback_view(request: HttpRequest):
         messages.error(request, "Monitoring profile was not found.")
         return redirect("dashboard")
 
+    if profile.connected_sources.filter(
+        is_deleted=False,
+    ).exclude(
+        source_type=ConnectedSource.SourceType.GMAIL,
+    ).exists():
+        messages.error(
+            request,
+            "This profile already has a non-Gmail source. Create a separate Gmail profile.",
+        )
+        return redirect("dashboard")
+
     redirect_uri = request.build_absolute_uri(
         reverse("integrations:gmail_oauth_callback")
     )
@@ -407,9 +428,12 @@ def gmail_oauth_callback_view(request: HttpRequest):
         token_payload=token_payload,
     )
 
+    profile.status = profile.Status.ACTIVE
+    profile.save(update_fields=["status", "updated_at"])
+
     messages.success(
         request,
-        f"Gmail connected: {gmail_address}. Source #{source.id} is active.",
+        f"Gmail connected: {gmail_address}. Gmail profile is active.",
     )
 
     return redirect("dashboard")
@@ -489,7 +513,7 @@ def upsert_gmail_connected_source(
     gmail_address: str,
     token_payload: dict,
 ) -> ConnectedSource:
-    """Create or update Gmail ConnectedSource for one profile."""
+    """Create or update Gmail ConnectedSource for one Gmail profile."""
 
     source, _ = ConnectedSource.objects.get_or_create(
         profile=profile,

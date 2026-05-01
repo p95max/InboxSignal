@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Create Gmail profile | Messaging Monitoring{% endblock %}
+
+{% block content %}
+<div class="page-header page-header-with-actions">
+    <div>
+        <h1>Create Gmail monitoring profile</h1>
+        <p>
+            Create a separate profile for Gmail inbox monitoring.
+            Gmail will be connected through Google OAuth in the next step.
+        </p>
+    </div>
+
+    <a class="button" href="{% url 'dashboard' %}">
+        Back to dashboard
+    </a>
+</div>
+
+<section class="card">
+    <form method="post" class="profile-create-form">
+        {% csrf_token %}
+
+        {% include "includes/_monitoring_profile_form_sections.html" with show_connection_fields=False show_settings_fields=False show_status_field=False %}
+
+        <div class="form-actions">
+            <a class="button" href="{% url 'dashboard' %}">
+                Cancel
+            </a>
+
+            <button class="button button-primary" type="submit">
+                Continue to Gmail connection
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}

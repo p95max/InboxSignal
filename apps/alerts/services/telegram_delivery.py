@@ -36,16 +36,11 @@ def send_telegram_alert(alert: AlertDelivery) -> AlertDelivery:
     if not alert.recipient:
         raise NonRetryableAlertDeliveryError("Telegram recipient is empty.")
 
-    incoming_message = alert.event.incoming_message
-
-    if incoming_message is None:
-        raise NonRetryableAlertDeliveryError("Alert event has no incoming message.")
-
-    source = incoming_message.source
+    source = get_telegram_delivery_source(alert)
 
     if source is None:
         raise NonRetryableAlertDeliveryError(
-            "Incoming message has no connected source."
+            "Telegram delivery source was not found."
         )
 
     bot_token = source.get_credentials()
@@ -70,6 +65,38 @@ def send_telegram_alert(alert: AlertDelivery) -> AlertDelivery:
     )
 
     return alert
+
+
+def get_telegram_delivery_source(alert: AlertDelivery) -> ConnectedSource | None:
+    """Return Telegram source used for sending this alert."""
+
+    payload = alert.payload or {}
+    telegram_source_id = payload.get("telegram_source_id")
+
+    if telegram_source_id:
+        source = (
+            ConnectedSource.objects.filter(
+                id=telegram_source_id,
+                source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
+                status=ConnectedSource.Status.ACTIVE,
+                is_deleted=False,
+            )
+            .first()
+        )
+
+        if source is not None:
+            return source
+
+    incoming_message = alert.event.incoming_message
+
+    if (
+        incoming_message
+        and incoming_message.source
+        and incoming_message.source.source_type == ConnectedSource.SourceType.TELEGRAM_BOT
+    ):
+        return incoming_message.source
+
+    return None
 
 
 def build_telegram_alert_text(alert: AlertDelivery) -> str:

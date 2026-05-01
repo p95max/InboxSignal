@@ -1,9 +1,10 @@
 import logging
+
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from django.conf import settings
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from apps.alerts.models import AlertDelivery
@@ -20,6 +21,14 @@ class DigestPeriod:
 
     start: datetime
     end: datetime
+
+
+@dataclass(frozen=True)
+class DigestSourceContext:
+    """Digest target profile with Telegram delivery source."""
+
+    profile: MonitoringProfile
+    telegram_source: ConnectedSource
 
 
 @dataclass(frozen=True)
@@ -78,12 +87,12 @@ def create_due_digest_deliveries(
     reference_time = timezone.localtime(reference_time or timezone.now())
     results = []
 
-    for source in iter_digest_sources():
-        if not source.profile.digest_enabled:
-            continue
+    for context in iter_digest_sources():
+        profile = context.profile
+        source = context.telegram_source
 
         interval_hours = normalize_digest_interval_hours(
-            source.profile.digest_interval_hours
+            profile.digest_interval_hours
         )
 
         if not is_digest_interval_due(
@@ -104,6 +113,7 @@ def create_due_digest_deliveries(
 
         result = create_digest_delivery_for_source(
             source=source,
+            profile=profile,
             recipient=recipient,
             period=period,
         )
@@ -164,17 +174,56 @@ def create_digest_deliveries_for_period(
 
 
 def iter_digest_sources():
-    return (
-        ConnectedSource.objects.select_related("profile", "owner")
+    profiles = (
+        MonitoringProfile.objects.select_related("owner")
         .filter(
+            status=MonitoringProfile.Status.ACTIVE,
+            digest_enabled=True,
+        )
+        .order_by("owner_id", "id")
+    )
+
+    for profile in profiles:
+        telegram_source = get_default_digest_telegram_source(profile)
+
+        if telegram_source is None:
+            continue
+
+        yield DigestSourceContext(
+            profile=profile,
+            telegram_source=telegram_source,
+        )
+
+
+def get_default_digest_telegram_source(
+    profile: MonitoringProfile,
+) -> ConnectedSource | None:
+    """Return Telegram source used for digest delivery for this profile."""
+
+    sources = (
+        ConnectedSource.objects.filter(
+            owner=profile.owner,
             source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
             status=ConnectedSource.Status.ACTIVE,
             is_deleted=False,
-            profile__status=MonitoringProfile.Status.ACTIVE,
-            profile__digest_enabled=True,
         )
-        .order_by("profile_id", "id")
+        .order_by(
+            models.Case(
+                models.When(profile=profile, then=0),
+                default=1,
+                output_field=models.IntegerField(),
+            ),
+            "id",
+        )
     )
+
+    for source in sources:
+        metadata = source.metadata or {}
+
+        if str(metadata.get("alert_chat_id", "")).strip():
+            return source
+
+    return None
 
 
 def is_digest_interval_due(
@@ -218,14 +267,17 @@ def create_digest_delivery_for_source(
     source: ConnectedSource,
     recipient: str,
     period: DigestPeriod,
+    profile: MonitoringProfile | None = None,
 ) -> DigestBuildResult:
-    """Create one digest delivery for a Telegram alert source."""
+    """Create one digest delivery using Telegram as delivery source."""
 
-    if not source.profile.digest_enabled:
+    target_profile = profile or source.profile
+
+    if not target_profile.digest_enabled:
         logger.info(
             "digest_delivery_skipped_disabled",
             extra={
-                "profile_id": source.profile_id,
+                "profile_id": target_profile.id,
                 "source_id": source.id,
             },
         )
@@ -233,7 +285,7 @@ def create_digest_delivery_for_source(
 
     events = list(
         get_digest_events_for_profile(
-            profile=source.profile,
+            profile=target_profile,
             period=period,
         )
     )
@@ -243,7 +295,7 @@ def create_digest_delivery_for_source(
 
     representative_event = events[0]
     idempotency_key = build_digest_idempotency_key(
-        profile_id=source.profile_id,
+        profile_id=target_profile.id,
         source_id=source.id,
         recipient=recipient,
         period=period,
@@ -251,6 +303,7 @@ def create_digest_delivery_for_source(
 
     payload = build_digest_payload(
         source=source,
+        profile=target_profile,
         recipient=recipient,
         period=period,
         events=events,
@@ -260,7 +313,7 @@ def create_digest_delivery_for_source(
         alert, created = AlertDelivery.objects.get_or_create(
             idempotency_key=idempotency_key,
             defaults={
-                "profile": source.profile,
+                "profile": target_profile,
                 "event": representative_event,
                 "channel": AlertDelivery.Channel.TELEGRAM,
                 "delivery_type": AlertDelivery.DeliveryType.DIGEST,
@@ -274,7 +327,7 @@ def create_digest_delivery_for_source(
         "digest_delivery_created" if created else "digest_delivery_reused",
         extra={
             "alert_id": str(alert.id),
-            "profile_id": source.profile_id,
+            "profile_id": target_profile.id,
             "source_id": source.id,
             "recipient": recipient,
             "period_start": period.start.isoformat(),
@@ -352,8 +405,11 @@ def build_digest_payload(
     recipient: str,
     period: DigestPeriod,
     events: list[Event],
+    profile: MonitoringProfile | None = None,
 ) -> dict:
     """Build provider-agnostic digest payload."""
+
+    target_profile = profile or source.profile
 
     urgent_count = sum(1 for event in events if event.priority == Event.Priority.URGENT)
     important_count = sum(
@@ -362,12 +418,12 @@ def build_digest_payload(
 
     return {
         "type": "events_digest_v1",
-        "profile_id": source.profile_id,
+        "profile_id": target_profile.id,
         "source_id": source.id,
         "recipient": recipient,
         "period_start": period.start.isoformat(),
         "period_end": period.end.isoformat(),
-        "digest_interval_hours": source.profile.digest_interval_hours,
+        "digest_interval_hours": target_profile.digest_interval_hours,
         "counts": {
             "total": len(events),
             "urgent": urgent_count,

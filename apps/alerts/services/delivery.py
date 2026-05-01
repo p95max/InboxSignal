@@ -1,11 +1,13 @@
 import logging
 
+from django.db import models
+
 from apps.alerts.models import AlertDelivery
 from apps.alerts.services.cooldown import (
     is_alert_in_cooldown,
     set_alert_cooldown,
 )
-from apps.monitoring.models import Event
+from apps.monitoring.models import Event, IncomingMessage
 from apps.integrations.models import ConnectedSource
 
 
@@ -26,7 +28,11 @@ def create_alert_delivery_for_event(event: Event) -> AlertDelivery | None:
         )
         return None
 
-    recipient = get_default_recipient(event)
+    telegram_source = get_default_telegram_alert_source(event)
+    recipient = get_default_recipient(
+        event=event,
+        telegram_source=telegram_source,
+    )
 
     if not recipient:
         logger.warning(
@@ -80,7 +86,10 @@ def create_alert_delivery_for_event(event: Event) -> AlertDelivery | None:
         channel=AlertDelivery.Channel.TELEGRAM,
         delivery_type=AlertDelivery.DeliveryType.INSTANT,
         recipient=recipient,
-        payload=build_alert_payload(event),
+        payload=build_alert_payload(
+            event=event,
+            telegram_source=telegram_source,
+        ),
     )
 
     set_alert_cooldown(event, recipient)
@@ -100,23 +109,46 @@ def create_alert_delivery_for_event(event: Event) -> AlertDelivery | None:
     return alert
 
 
-def get_default_recipient(event: Event) -> str:
-    """Return Telegram alert recipient configured for the event profile.
+def get_default_telegram_alert_source(event: Event) -> ConnectedSource | None:
+    """Return Telegram source used as account-level alert destination.
 
-    Incoming source and alert destination are different concepts.
-    Gmail can be an incoming source, while Telegram remains the alert channel.
+    Same-profile Telegram source is preferred.
+    If the event belongs to a Gmail profile, fall back to any active Telegram
+    source of the same owner with alert_chat_id configured.
     """
 
-    telegram_source = (
+    sources = (
         ConnectedSource.objects.filter(
-            profile=event.profile,
+            owner=event.profile.owner,
             source_type=ConnectedSource.SourceType.TELEGRAM_BOT,
             status=ConnectedSource.Status.ACTIVE,
             is_deleted=False,
         )
-        .order_by("id")
-        .first()
+        .order_by(
+            models.Case(
+                models.When(profile=event.profile, then=0),
+                default=1,
+                output_field=models.IntegerField(),
+            ),
+            "id",
+        )
     )
+
+    for source in sources:
+        metadata = source.metadata or {}
+
+        if str(metadata.get("alert_chat_id", "")).strip():
+            return source
+
+    return None
+
+
+def get_default_recipient(
+    *,
+    event: Event,
+    telegram_source: ConnectedSource | None,
+) -> str:
+    """Return explicit Telegram alert recipient."""
 
     if telegram_source is None:
         return ""
@@ -130,8 +162,8 @@ def get_default_recipient(event: Event) -> str:
     message = event.incoming_message
 
     if (
-        message
-        and message.channel == message.Channel.TELEGRAM
+        message is not None
+        and message.channel == IncomingMessage.Channel.TELEGRAM
         and message.external_chat_id
         and alert_chat_id == str(message.external_chat_id).strip()
     ):
@@ -149,7 +181,11 @@ def get_default_recipient(event: Event) -> str:
     return alert_chat_id
 
 
-def build_alert_payload(event: Event) -> dict:
+def build_alert_payload(
+    *,
+    event: Event,
+    telegram_source: ConnectedSource | None = None,
+) -> dict:
     """Build provider-agnostic alert payload."""
 
     return {
@@ -163,4 +199,7 @@ def build_alert_payload(event: Event) -> dict:
         "message": event.message_text_snapshot,
         "detection_source": event.detection_source,
         "extracted_data": event.extracted_data,
+        "telegram_source_id": telegram_source.id if telegram_source else None,
     }
+
+

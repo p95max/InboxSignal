@@ -187,12 +187,6 @@ SOCIALACCOUNT_EMAIL_VERIFICATION = env(
 
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
 GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", default="")
-GMAIL_OAUTH_SCOPES = env.list(
-    "GMAIL_OAUTH_SCOPES",
-    default=[
-        "https://www.googleapis.com/auth/gmail.readonly",
-    ],
-)
 ACCOUNT_ADAPTER = "apps.accounts.adapters.AccountAdapter"
 
 GOOGLE_AUTH_ENABLED = bool(
@@ -244,6 +238,12 @@ if GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET:
         "key": "",
     }
 
+GMAIL_OAUTH_SCOPES = env.list(
+    "GMAIL_OAUTH_SCOPES",
+    default=[
+        "https://www.googleapis.com/auth/gmail.readonly",
+    ],
+)
 
 # ==============================================================================
 # Redis / Cache
@@ -328,6 +328,7 @@ if GMAIL_POLLING_ENABLED:
             minute=GMAIL_POLLING_BEAT_MINUTE,
         ),
     }
+
 
 # ==============================================================================
 # Security / Encryption
