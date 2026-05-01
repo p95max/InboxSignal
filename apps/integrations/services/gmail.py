@@ -493,6 +493,12 @@ def decode_gmail_body_data(data: str) -> str:
     except Exception:
         return ""
 
+    for encoding in ("utf-8", "latin-1", "cp1252"):
+        try:
+            return decoded.decode(encoding).strip()
+        except UnicodeDecodeError:
+            continue
+
     return decoded.decode("utf-8", errors="replace").strip()
 
 
