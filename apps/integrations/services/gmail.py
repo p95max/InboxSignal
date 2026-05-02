@@ -2,7 +2,7 @@ import base64
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime, timedelta, timezone as dt_timezone
 from email.utils import parseaddr, parsedate_to_datetime
 from typing import Any
 
@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 GMAIL_API_BASE_URL = "https://gmail.googleapis.com/gmail/v1"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GMAIL_TOKEN_EXPIRY_SAFETY_SECONDS = 60
 
 
 class GmailIntegrationError(Exception):
@@ -82,7 +83,10 @@ def sync_gmail_source(source: ConnectedSource) -> int:
 
     metadata = source.metadata or {}
     label_filter = metadata.get("label_filter") or "INBOX"
-    max_results = settings.GMAIL_MAX_MESSAGES_PER_SYNC
+    if not metadata.get("initial_sync_completed"):
+        max_results = min(settings.GMAIL_MAX_MESSAGES_PER_SYNC, 10)
+    else:
+        max_results = settings.GMAIL_MAX_MESSAGES_PER_SYNC
 
     profile_payload = gmail_get_profile(access_token)
     gmail_address = str(profile_payload.get("emailAddress", "")).strip()
@@ -127,6 +131,7 @@ def sync_gmail_source(source: ConnectedSource) -> int:
     metadata["last_sync_at"] = timezone.now().isoformat()
     metadata["sync_mode"] = "polling"
     metadata["label_filter"] = label_filter
+    metadata["initial_sync_completed"] = True
 
     source.metadata = metadata
     source.save(update_fields=["metadata", "updated_at"])
@@ -221,19 +226,46 @@ def get_valid_access_token(
     source: ConnectedSource,
     credentials: dict[str, Any],
 ) -> str:
-    """Return access token, refreshing it if possible.
+    """Return a usable Gmail access token.
 
-    MVP strategy:
-    - try current access_token first
-    - if Gmail API returns 401, caller can refresh through refresh_gmail_access_token
+    Access tokens are short-lived. If expiration is unknown or close,
+    refresh the token using the stored refresh token.
     """
 
     access_token = str(credentials.get("access_token", "")).strip()
+    refresh_token = str(credentials.get("refresh_token", "")).strip()
+    expires_at = parse_credentials_expires_at(credentials.get("expires_at"))
+
+    now = timezone.now()
+    safety_window = timedelta(seconds=GMAIL_TOKEN_EXPIRY_SAFETY_SECONDS)
+
+    if access_token and expires_at and expires_at > now + safety_window:
+        return access_token
+
+    if refresh_token:
+        return refresh_gmail_access_token(source=source, credentials=credentials)
 
     if access_token:
         return access_token
 
-    return refresh_gmail_access_token(source=source, credentials=credentials)
+    raise GmailIntegrationError("Gmail access token is missing.")
+
+
+def parse_credentials_expires_at(value: Any) -> datetime | None:
+    """Parse stored OAuth token expiration datetime."""
+
+    if not value:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt_timezone.utc)
+
+    return parsed
 
 
 def refresh_gmail_access_token(
@@ -279,8 +311,19 @@ def refresh_gmail_access_token(
 
     credentials["access_token"] = access_token
 
-    if response_data.get("expires_in"):
-        credentials["expires_in"] = response_data["expires_in"]
+    expires_in = response_data.get("expires_in")
+
+    if expires_in:
+        try:
+            expires_in_seconds = int(expires_in)
+        except (TypeError, ValueError):
+            expires_in_seconds = 0
+
+        credentials["expires_in"] = expires_in_seconds
+
+        credentials["expires_at"] = (
+                timezone.now() + timedelta(seconds=expires_in_seconds)
+        ).isoformat()
 
     save_gmail_credentials(source=source, credentials=credentials)
 
