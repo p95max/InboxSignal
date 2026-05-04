@@ -57,6 +57,9 @@ The system is **not** a chat client and **not** a CRM. It is a message triage ba
 - Celery Beat service for scheduled digest building
 - idempotent alert and digest delivery creation
 - customer auto-replies and anti-spam limits
+- public contact/support form with Cloudflare Turnstile protection
+- contact form IP-based rate limiting and honeypot spam protection
+- contact form delivery through Django email backend
 - AI usage limits per account and optional stricter per-profile limit
 - minimal internal ops visibility for failed alerts, AI fallbacks, webhook rejects, and pending retries
 - Django admin coverage for core models
@@ -129,6 +132,25 @@ Application URL:
 
 - `http://localhost:8000`
 
+### Contact form and Turnstile in local development
+
+The public contact form is available at:
+
+```text
+http://localhost:8000/contact/
+```
+
+For local development, Turnstile is disabled by default when DJANGO_DEBUG=True.
+To test the full protected flow locally, enable it explicitly:
+```text
+TURNSTILE_ENABLED=1
+TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+CONTACT_FORM_RECIPIENT_EMAIL=dev@example.com
+CONTACT_FORM_RATE_LIMIT_PER_HOUR=5
+```
+
+---
 ## Migrations
 
 Create migrations:
@@ -370,6 +392,10 @@ Current important protections include:
 - dedicated Telegram secret token header validation
 - webhook rate limits on source and profile level
 - customer anti-spam limits
+- Cloudflare Turnstile protection for the public contact form
+- server-side Turnstile token verification before email delivery
+- contact form IP-based rate limiting
+- hidden honeypot field for basic bot filtering
 - protected alert chat binding via `/start_alerts <setup-token>`
 - manual digest restricted to the configured alert chat
 - alert cooldown support
@@ -458,6 +484,9 @@ Implemented end-to-end:
 - manual Telegram digest command
 - event review / ignore / escalate / archive workflow
 - minimal ops visibility
+- public contact/support form
+- Cloudflare Turnstile integration for contact form abuse protection
+- contact form email delivery with local console backend support
 - separate Gmail monitoring profile creation flow
 - Gmail OAuth connection flow
 - encrypted Gmail token storage

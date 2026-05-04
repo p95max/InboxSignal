@@ -78,7 +78,12 @@
                                 </div>
                             {% endif %}
 
-                            <button type="submit" class="btn btn-primary w-100">
+                            <button
+                                type="submit"
+                                id="contact-submit-button"
+                                class="btn btn-primary w-100"
+                                {% if turnstile_enabled %}disabled{% endif %}
+                            >
                                 Send message
                             </button>
                         </form>
@@ -96,6 +101,30 @@
 
 {% block extra_js %}
     {% if turnstile_enabled %}
+        <script>
+            function setContactSubmitEnabled(enabled) {
+                const submitButton = document.getElementById("contact-submit-button");
+
+                if (!submitButton) {
+                    return;
+                }
+
+                submitButton.disabled = !enabled;
+            }
+
+            function onTurnstileSuccess(token) {
+                setContactSubmitEnabled(Boolean(token));
+            }
+
+            function onTurnstileError() {
+                setContactSubmitEnabled(false);
+            }
+
+            function onTurnstileExpired() {
+                setContactSubmitEnabled(false);
+            }
+        </script>
+
         <script
             src="https://challenges.cloudflare.com/turnstile/v0/api.js"
             async

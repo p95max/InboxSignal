@@ -342,8 +342,12 @@ Key points:
 Responsibilities:
 
 - public pages (`home`, `about`)
+- public contact/support form (`/contact/`)
+- Cloudflare Turnstile integration for public form abuse protection
+- contact form email delivery through Django email backend
 - `/health/` endpoint
 - shared Redis-backed rate-limit service
+- IP-based contact form rate limiting
 - auth-related template context flags
 - lightweight ops metrics counters for webhook rejects
 
@@ -818,6 +822,41 @@ Duplicate Telegram deliveries are allowed through to normal deduplication, so pr
 - digest idempotency
 - alert cooldown by profile/category/priority/contact
 - non-retryable Telegram failures are skipped instead of retried forever
+
+### 8.5 Public form abuse controls
+
+The public contact form is protected independently from Telegram/Gmail ingestion security.
+
+Protection layers:
+
+1. CSRF protection through Django form handling.
+2. Hidden honeypot field (`website`) to catch simple automated spam submissions.
+3. IP-based fixed-window rate limit backed by Redis.
+4. Cloudflare Turnstile widget on the client side.
+5. Server-side Turnstile token verification before email delivery.
+
+Runtime flow:
+
+```text
+GET /contact/
+    -> render ContactForm
+    -> render Turnstile widget when TURNSTILE_ENABLED=True
+    -> submit button remains disabled until Turnstile callback succeeds
+
+POST /contact/
+    -> validate Django form
+    -> check contact_form IP rate limit
+    -> verify cf-turnstile-response with Cloudflare Siteverify
+    -> send message through Django email backend
+    -> log success/failure
+```
+Important behavior:
+* client-side Turnstile only improves UX and reduces automated submissions;
+* server-side verification is the real security gate;
+* the submit button is disabled until the Turnstile success callback returns a token;
+* expired, failed, or timed-out Turnstile checks disable the submit button again;
+* missing or invalid Turnstile token prevents email delivery;
+* local development can use Cloudflare test keys and Django console email backend.
 
 ---
 
@@ -1305,6 +1344,9 @@ The pytest suite covers the main risk areas:
 - customer rate limits
 - customer auto-replies
 - Telegram system commands
+- contact form validation and email delivery
+- contact form Turnstile failure handling
+- contact form rate-limit behavior
 - alert delivery and retry handling
 - digest period boundaries
 - digest idempotency / repeated runs
