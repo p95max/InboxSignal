@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Contact | InboxSignal{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-7 col-xl-6">
+                <div class="mb-4 text-center">
+                    <h1 class="fw-bold">Contact us</h1>
+                    <p class="text-muted mb-0">
+                        Send us a support request, question, or custom scenario inquiry.
+                    </p>
+                </div>
+
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4 p-md-5">
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+
+                            {{ form.website }}
+
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    {% for error in form.non_field_errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            <div class="mb-3">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">
+                                    {{ form.name.label }}
+                                </label>
+                                {{ form.name }}
+                                {% for error in form.name.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">
+                                    {{ form.email.label }}
+                                </label>
+                                {{ form.email }}
+                                {% for error in form.email.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.subject.id_for_label }}" class="form-label">
+                                    {{ form.subject.label }}
+                                </label>
+                                {{ form.subject }}
+                                {% for error in form.subject.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="{{ form.message.id_for_label }}" class="form-label">
+                                    {{ form.message.label }}
+                                </label>
+                                {{ form.message }}
+                                {% for error in form.message.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            {% if turnstile_enabled %}
+                                <div class="mb-4">
+                                    <div
+                                        class="cf-turnstile"
+                                        data-sitekey="{{ turnstile_site_key }}"
+                                    ></div>
+                                </div>
+                            {% endif %}
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                Send message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <p class="text-muted small mt-3 mb-0 text-center">
+                    We use this form only for support and product-related requests.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+    {% if turnstile_enabled %}
+        <script
+            src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+            async
+            defer
+        ></script>
+    {% endif %}
+{% endblock %}

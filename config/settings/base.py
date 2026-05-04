@@ -1,3 +1,5 @@
+import os
+
 from decimal import Decimal
 from pathlib import Path
 from celery.schedules import crontab
@@ -335,6 +337,34 @@ if GMAIL_POLLING_ENABLED:
 # ==============================================================================
 
 FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="")
+
+TURNSTILE_ENABLED = os.getenv(
+    "TURNSTILE_ENABLED",
+    "0" if DEBUG else "1",
+) == "1"
+
+TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
+TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "")
+
+CONTACT_FORM_RECIPIENT_EMAIL = os.getenv(
+    "CONTACT_FORM_RECIPIENT_EMAIL",
+    "",
+)
+
+CONTACT_FORM_RATE_LIMIT_PER_HOUR = int(
+    os.getenv("CONTACT_FORM_RATE_LIMIT_PER_HOUR", "5")
+)
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    "noreply@localhost",
+)
+
+if DEBUG:
+    EMAIL_BACKEND = os.getenv(
+        "EMAIL_BACKEND",
+        "django.core.mail.backends.console.EmailBackend",
+    )
 
 
 # ==============================================================================

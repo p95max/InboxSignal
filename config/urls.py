@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.core import views
 from apps.core.views import health_check, home_view, about_view
 from apps.accounts.views import account_delete_view
 from apps.monitoring.views import (
@@ -21,6 +22,7 @@ urlpatterns = [
     path("", home_view, name="home"),
     path("about/", about_view, name="about"),
     path("dashboard/", dashboard_view, name="dashboard"),
+    path("contact/", views.contact_view, name="contact"),
     path("ops/visibility/", ops_visibility_view, name="ops_visibility"),
     path(
         "ops/visibility.json",
