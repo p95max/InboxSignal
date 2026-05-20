@@ -81,3 +81,11 @@ docs/
 screenshots/
 *.md
 !README.md
+
+# OpenWA local runtime
+tools/openwa/node_modules/
+tools/openwa/package-lock.json
+tools/openwa/_IGNORE_*/
+tools/openwa/*.data.json
+tools/openwa/*.postman_collection.json
+tools/openwa/*.sw_col.json

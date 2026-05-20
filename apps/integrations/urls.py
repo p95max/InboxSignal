@@ -4,6 +4,7 @@ from apps.integrations.views import (
     gmail_connect_view,
     gmail_oauth_callback_view,
     telegram_bot_webhook,
+    whatsapp_gateway_webhook,
 )
 
 
@@ -14,6 +15,11 @@ urlpatterns = [
         "telegram/bot/<str:webhook_secret>/",
         telegram_bot_webhook,
         name="telegram_bot_webhook",
+    ),
+    path(
+        "whatsapp-gateway/<str:webhook_secret>/",
+        whatsapp_gateway_webhook,
+        name="whatsapp_gateway_webhook",
     ),
     path(
         "gmail/connect/",

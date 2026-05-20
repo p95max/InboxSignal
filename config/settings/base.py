@@ -433,6 +433,18 @@ REGISTERED_EVENT_ACTION_LIMIT_PER_MINUTE = env.int(
 
 
 # ==============================================================================
+# WHATSAPP
+# ==============================================================================
+
+WHATSAPP_GATEWAY_SOURCE_WEBHOOK_LIMIT_PER_MINUTE = int(
+    os.getenv("WHATSAPP_GATEWAY_SOURCE_WEBHOOK_LIMIT_PER_MINUTE", "120")
+)
+
+WHATSAPP_GATEWAY_PROFILE_WEBHOOK_LIMIT_PER_DAY = int(
+    os.getenv("WHATSAPP_GATEWAY_PROFILE_WEBHOOK_LIMIT_PER_DAY", "3000")
+)
+
+# ==============================================================================
 # AI
 # ==============================================================================
 

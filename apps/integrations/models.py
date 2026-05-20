@@ -15,7 +15,8 @@ class ConnectedSource(models.Model):
         TELEGRAM_BOT = "telegram_bot", _("Telegram bot")
         TELEGRAM_ACCOUNT = "telegram_account", _("Telegram account")
         GMAIL = "gmail", _("Gmail")
-        WHATSAPP = "whatsapp", _("WhatsApp")
+        WHATSAPP_GATEWAY = "whatsapp_gateway", _("WhatsApp gateway")
+        WHATSAPP = "whatsapp", _("WhatsApp Cloud API")
         WEBHOOK = "webhook", _("Webhook")
         OTHER = "other", _("Other")
 

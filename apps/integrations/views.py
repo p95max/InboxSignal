@@ -22,6 +22,9 @@ from django.utils import timezone
 from apps.core.services.rate_limits import RateLimitPeriod, check_rate_limit
 from apps.integrations.models import ConnectedSource
 from apps.integrations.services.telegram_bot import handle_telegram_webhook_update
+from apps.integrations.services.whatsapp_gateway import (
+    handle_whatsapp_gateway_payload,
+)
 from apps.core.services.ops_metrics import (
     WEBHOOK_REJECT_400_INVALID_JSON,
     WEBHOOK_REJECT_403_INVALID_SECRET_TOKEN,
@@ -35,6 +38,7 @@ from apps.core.services.ops_metrics import (
 logger = logging.getLogger(__name__)
 
 TELEGRAM_SECRET_TOKEN_HEADER = "X-Telegram-Bot-Api-Secret-Token"
+WHATSAPP_GATEWAY_SECRET_TOKEN_HEADER = "X-InboxSignal-Webhook-Token"
 
 @dataclass(frozen=True)
 class TelegramWebhookSourceMatch:
@@ -202,6 +206,224 @@ def telegram_bot_webhook(request: HttpRequest, webhook_secret: str) -> JsonRespo
             "task_id": result.task_id if result else None,
         }
     )
+
+
+@csrf_exempt
+@require_POST
+def whatsapp_gateway_webhook(
+    request: HttpRequest,
+    webhook_secret: str,
+) -> JsonResponse:
+    """Inbound-only webhook endpoint for unofficial WhatsApp gateways."""
+
+    source = get_whatsapp_gateway_source_by_webhook_secret(webhook_secret)
+
+    if source is None:
+        logger.warning(
+            "whatsapp_gateway_webhook_rejected_unknown_secret",
+            extra={
+                "webhook_secret_present": bool(webhook_secret),
+            },
+        )
+
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "not_found",
+            },
+            status=404,
+        )
+
+    if not is_valid_whatsapp_gateway_secret_token(
+        request=request,
+        source=source,
+    ):
+        logger.warning(
+            "whatsapp_gateway_webhook_rejected_invalid_secret_token",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+                "secret_token_present": bool(
+                    request.headers.get(WHATSAPP_GATEWAY_SECRET_TOKEN_HEADER)
+                ),
+            },
+        )
+
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "forbidden",
+            },
+            status=403,
+        )
+
+    source_limit = check_rate_limit(
+        name="whatsapp-gateway-source-webhook",
+        actor=source.id,
+        limit=getattr(
+            settings,
+            "WHATSAPP_GATEWAY_SOURCE_WEBHOOK_LIMIT_PER_MINUTE",
+            120,
+        ),
+        period=RateLimitPeriod.MINUTE,
+    )
+
+    if not source_limit.allowed:
+        logger.warning(
+            "whatsapp_gateway_webhook_rate_limited_source",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+                "limit": source_limit.limit,
+                "current": source_limit.current,
+                "retry_after_seconds": source_limit.retry_after_seconds,
+            },
+        )
+
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "rate_limited",
+                "scope": "source",
+                "retry_after_seconds": source_limit.retry_after_seconds,
+            },
+            status=429,
+        )
+
+    profile_limit = check_rate_limit(
+        name="whatsapp-gateway-profile-webhook",
+        actor=source.profile_id,
+        limit=getattr(
+            settings,
+            "WHATSAPP_GATEWAY_PROFILE_WEBHOOK_LIMIT_PER_DAY",
+            3000,
+        ),
+        period=RateLimitPeriod.DAY,
+    )
+
+    if not profile_limit.allowed:
+        logger.warning(
+            "whatsapp_gateway_webhook_rate_limited_profile",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+                "limit": profile_limit.limit,
+                "current": profile_limit.current,
+                "retry_after_seconds": profile_limit.retry_after_seconds,
+            },
+        )
+
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "rate_limited",
+                "scope": "profile",
+                "retry_after_seconds": profile_limit.retry_after_seconds,
+            },
+            status=429,
+        )
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        logger.warning(
+            "whatsapp_gateway_webhook_invalid_json",
+            extra={
+                "source_id": source.id,
+                "profile_id": source.profile_id,
+            },
+        )
+
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "invalid_json",
+            },
+            status=400,
+        )
+
+    if not isinstance(payload, dict):
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "invalid_payload",
+            },
+            status=400,
+        )
+
+    results = handle_whatsapp_gateway_payload(
+        source=source,
+        payload=payload,
+        enqueue_processing=True,
+    )
+
+    created_count = sum(1 for result in results if result.created)
+
+    logger.info(
+        "whatsapp_gateway_webhook_response",
+        extra={
+            "source_id": source.id,
+            "profile_id": source.profile_id,
+            "results_count": len(results),
+            "created_count": created_count,
+        },
+    )
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "ingested": bool(results),
+            "messages_count": len(results),
+            "created_count": created_count,
+            "message_ids": [
+                str(result.message.id)
+                for result in results
+            ],
+        }
+    )
+
+
+def get_whatsapp_gateway_source_by_webhook_secret(
+    webhook_secret: str,
+) -> ConnectedSource | None:
+    """Return active WhatsApp gateway source by webhook path secret."""
+
+    if not webhook_secret:
+        return None
+
+    return (
+        ConnectedSource.objects.select_related("profile", "owner")
+        .filter(
+            source_type=ConnectedSource.SourceType.WHATSAPP_GATEWAY,
+            status=ConnectedSource.Status.ACTIVE,
+            is_deleted=False,
+            webhook_secret=webhook_secret,
+        )
+        .first()
+    )
+
+
+def is_valid_whatsapp_gateway_secret_token(
+    *,
+    request: HttpRequest,
+    source: ConnectedSource,
+) -> bool:
+    """Validate optional shared webhook token for WhatsApp gateway requests."""
+
+    expected = (source.webhook_secret_token or "").strip()
+
+    if not expected:
+        return True
+
+    provided = request.headers.get(
+        WHATSAPP_GATEWAY_SECRET_TOKEN_HEADER,
+        "",
+    ).strip()
+
+    if not provided:
+        return False
+
+    return secrets.compare_digest(provided, expected)
 
 
 def is_valid_telegram_secret_token(
